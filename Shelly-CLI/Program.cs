@@ -1,9 +1,11 @@
 using System.Reflection;
+using System.Text.Json;
 using Shelly_CLI.Commands.Aur;
 using Shelly_CLI.Commands.Flatpak;
 using Shelly_CLI.Commands.Keyring;
 using Shelly_CLI.Commands.Standard;
 using Shelly_CLI.Commands.Utility;
+using Shelly_CLI.Configuration;
 using Shelly.Writers;
 using Spectre.Console;
 using Spectre.Console.Cli;
@@ -16,6 +18,33 @@ public class Program
 
     public static int Main(string[] args)
     {
+        // Ensure default configuration exists in ~/.config/shelly/config.json
+        string configPath;
+        if (Environment.GetEnvironmentVariable("USER") == "root")
+        {
+            var username = Environment.GetEnvironmentVariable("SUDO_USER");
+            configPath = Path.Combine("/home", username, ".config", "shelly", "config.json");
+        }
+        else
+        {
+            configPath = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
+                "shelly", "config.json");
+        }
+
+        if (!File.Exists(configPath))
+        {
+            var configDir = Path.GetDirectoryName(configPath);
+            if (!string.IsNullOrEmpty(configDir))
+            {
+                Directory.CreateDirectory(configDir);
+            }
+
+            var defaultConfig = new ShellyConfig();
+            var options = new JsonSerializerOptions { WriteIndented = true };
+            var json = JsonSerializer.Serialize(defaultConfig, typeof(ShellyConfig), new ShellyCLIJsonContext(options));
+            File.WriteAllText(configPath, json);
+        }
+
         // Check if running in UI mode (--ui-mode flag passed by Shelly-UI)
         var argsList = args.ToList();
         IsUiMode = argsList.Remove("--ui-mode");
@@ -49,6 +78,7 @@ public class Program
         }
 
         var app = new CommandApp();
+        app.SetDefaultCommand<Commands.DefaultCommand>();
         app.Configure(config =>
         {
             config.SetApplicationName("shelly");
@@ -81,7 +111,7 @@ public class Program
             config.AddCommand<ListUpdatesCommand>("list-updates")
                 .WithDescription("List packages that need updates")
                 .WithExample("list-updates");
-            
+
             config.AddCommand<PackageInformationCommand>("info")
                 .WithDescription("Display information about a package")
                 .WithExample("info", "firefox", "--installed")
@@ -140,10 +170,10 @@ public class Program
                 .WithExample("downgrade", "firefox")
                 .WithExample("downgrade", "firefox", "--oldest")
                 .WithExample("downgrade", "firefox", "--latest");
-            
+
             config.AddCommand<ArchNews>("news")
                 .WithDescription("Shows Arch news you haven't seen before")
-                .WithExample("news","--all");
+                .WithExample("news", "--all");
 
             config.AddBranch("keyring", keyring =>
             {

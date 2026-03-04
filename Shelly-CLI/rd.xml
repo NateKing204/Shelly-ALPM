@@ -8,6 +8,7 @@
             <Type Name="Shelly_CLI.SortOption" Dynamic="Required All"/>
             <Type Name="Shelly_CLI.SortDirection" Dynamic="Required All"/>
             <!-- Standard commands -->
+            <Type Name="Shelly_CLI.Commands.DefaultCommand" Dynamic="Required All"/>
             <Type Name="Shelly_CLI.Commands.Standard.VersionCommand" Dynamic="Required All"/>
             <Type Name="Shelly_CLI.Commands.Standard.SyncSettings" Dynamic="Required All"/>
             <Type Name="Shelly_CLI.Commands.Standard.SyncCommand" Dynamic="Required All"/>

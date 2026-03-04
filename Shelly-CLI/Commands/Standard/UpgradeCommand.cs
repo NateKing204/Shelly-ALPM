@@ -1,9 +1,8 @@
-using System;
-using System.Collections.Generic;
 using System.Diagnostics.CodeAnalysis;
 using PackageManager.Alpm;
 using Shelly_CLI.Commands.Aur;
 using Shelly_CLI.Commands.Flatpak;
+using Shelly_CLI.Configuration;
 using Shelly_CLI.Utility;
 using Spectre.Console;
 using Spectre.Console.Cli;
@@ -18,10 +17,10 @@ public class UpgradeCommand : Command<UpgradeSettings>
         {
             return HandleUiModeUpgrade(settings);
         }
-        
+
         var archNews = new ArchNews();
         archNews.ExecuteAsync(context, new ArchNewsSettings()).GetAwaiter().GetResult();
-        
+
         AnsiConsole.MarkupLine("[yellow]Performing full system upgrade...[/]");
 
         var manager = new AlpmManager();
@@ -41,7 +40,7 @@ public class UpgradeCommand : Command<UpgradeSettings>
             lock (renderLock)
             {
                 AnsiConsole.WriteLine();
-               QuestionHandler.HandleQuestion(args,Program.IsUiMode,settings.NoConfirm);
+                QuestionHandler.HandleQuestion(args, Program.IsUiMode, settings.NoConfirm);
             }
         };
 
@@ -55,14 +54,19 @@ public class UpgradeCommand : Command<UpgradeSettings>
             return 0;
         }
 
+        var config = ConfigManager.ReadConfig();
+        var parsed =
+            (Shelly_CLI.Configuration.SizeDisplay)Enum.Parse(typeof(Shelly_CLI.Configuration.SizeDisplay),
+                config.FileSizeDisplay);
+
         var table = new Table();
         table.AddColumn("Package");
         table.AddColumn("Current Version");
         table.AddColumn("New Version");
-        table.AddColumn("Download Size");
+        table.AddColumn($"Download Size ({config.FileSizeDisplay})");
         foreach (var pkg in packagesNeedingUpdate)
         {
-            table.AddRow(pkg.Name, pkg.CurrentVersion, pkg.NewVersion, pkg.DownloadSize.ToString());
+            table.AddRow(pkg.Name, pkg.CurrentVersion, pkg.NewVersion, CalculateDownside(parsed, pkg.DownloadSize));
         }
 
         AnsiConsole.Write(table);
@@ -131,6 +135,7 @@ public class UpgradeCommand : Command<UpgradeSettings>
             var flatpakCommand = new FlatpakUpgrade();
             flatpakCommand.Execute(context);
         }
+
         return 0;
     }
 
@@ -172,11 +177,12 @@ public class UpgradeCommand : Command<UpgradeSettings>
         Console.Error.WriteLine($"{packagesNeedingUpdate.Count} packages need updates:");
         foreach (var pkg in packagesNeedingUpdate)
         {
-            Console.Error.WriteLine($"  {pkg.Name}: {pkg.CurrentVersion} -> {pkg.NewVersion} ({pkg.DownloadSize} bytes)");
+            Console.Error.WriteLine(
+                $"  {pkg.Name}: {pkg.CurrentVersion} -> {pkg.NewVersion} ({pkg.DownloadSize} bytes)");
         }
 
         Console.Error.WriteLine(" Starting System Upgrade...");
-        
+
         manager.Progress += (sender, args) =>
         {
             lock (renderLock)
@@ -187,11 +193,22 @@ public class UpgradeCommand : Command<UpgradeSettings>
                 Console.Error.WriteLine($"{name}: {pct}% - {actionType}");
             }
         };
-        
+
         manager.SyncSystemUpdate();
 
         Console.Error.WriteLine("System upgraded successfully!");
         manager.Dispose();
         return 0;
+    }
+
+    private string CalculateDownside(SizeDisplay size, long downloadSize)
+    {
+        return size switch
+        {
+            SizeDisplay.Bytes => downloadSize.ToString(),
+            SizeDisplay.Megabytes => (downloadSize / 1024).ToString(),
+            SizeDisplay.Gigabytes => ((downloadSize / 1024) / 1024).ToString(),
+            _ => downloadSize.ToString()
+        };
     }
 }

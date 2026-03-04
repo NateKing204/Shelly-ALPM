@@ -3,6 +3,7 @@ using PackageManager.Alpm;
 using PackageManager.Aur.Models;
 using Shelly_CLI.Commands.Aur;
 using Shelly_CLI.Commands.Standard;
+using Shelly_CLI.Configuration;
 
 namespace Shelly_CLI;
 
@@ -22,6 +23,7 @@ namespace Shelly_CLI;
 [JsonSerializable(typeof(List<AurSearchPackageBuild.PackageBuild>))]
 [JsonSerializable(typeof(ArchNews.RssModel))]
 [JsonSerializable(typeof(List<ArchNews.RssModel>))]
+[JsonSerializable(typeof(ShellyConfig))]
 internal partial class ShellyCLIJsonContext : JsonSerializerContext
 {
 }
