@@ -7,4 +7,5 @@ namespace Shelly.Gtk.UiModels.PackageManagerObjects.GObjects;
 public partial class AlpmPackageGObject
 {
     public AlpmPackageDto? Package { get; set; }
+    public bool IsSelected { get; set; }
 }

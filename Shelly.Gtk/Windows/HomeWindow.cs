@@ -2,6 +2,7 @@ using System.Text.RegularExpressions;
 using System.Xml.Linq;
 using GObject.Internal;
 using Gtk;
+using Shelly.Gtk.Helpers;
 using Shelly.Gtk.Services;
 using Shelly.Gtk.UiModels;
 using Shelly.Gtk.UiModels.PackageManagerObjects;
@@ -242,7 +243,7 @@ public class HomeWindow(
 
             FindLabel(grid, "name").SetMarkup($"<b>{GLib.Markup.EscapeText(pkg.Name)}</b>");
             FindLabel(grid, "version").SetText(pkg.Version);
-            FindLabel(grid, "size").SetText("130mb");
+            FindLabel(grid, "size").SetText(SizeHelpers.FormatSize(pkg.InstalledSize));
             FindLabel(grid, "reason").SetText(pkg.InstallReason);
             FindLabel(grid, "date").SetText(pkg.InstallDate.ToString() ?? string.Empty);
         };

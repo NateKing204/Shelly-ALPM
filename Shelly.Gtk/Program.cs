@@ -3,6 +3,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Shelly.Gtk.Services;
 using Shelly.Gtk.Windows;
 using Shelly.Gtk.Windows.Flatpak;
+using Shelly.Gtk.Windows.Packages;
 
 namespace Shelly.Gtk;
 
@@ -61,7 +62,7 @@ sealed class Program
 
             AddAction("install-packages", NavigateTo<HomeWindow>); 
             AddAction("update-packages", NavigateTo<HomeWindow>); // Placeholder
-            AddAction("manage-packages", NavigateTo<HomeWindow>); // Placeholder
+            AddAction("manage-packages", NavigateTo<PackageManagement>); // Placeholder
 
             // AUR Actions
             AddAction("install-aur", NavigateTo<HomeWindow>); // Placeholder
@@ -104,6 +105,7 @@ sealed class Program
         collection.AddTransient<FlatpakRemove>();
         collection.AddTransient<FlatpakInstall>();
         collection.AddTransient<FlatpakUpdate>();
+        collection.AddTransient<PackageManagement>();
         return collection.BuildServiceProvider();
     }
 }
