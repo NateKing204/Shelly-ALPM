@@ -110,6 +110,16 @@
                         <property name="label">Up to date</property>
                       </object>
                     </child>
+                    <child>
+                      <object class="GtkLabel" id="AurPercentLabel">
+                        <property name="justify">center</property>
+                        <property name="label">Calculating</property>
+                        <accessibility>
+                          <property name="orientation">horizontal</property>
+                          <property name="sort">other</property>
+                        </accessibility>
+                      </object>
+                    </child>
                   </object>
                 </child>
                 <child>
@@ -136,6 +146,11 @@
                         <property name="label">Up to date</property>
                       </object>
                     </child>
+                    <child>
+                      <object class="GtkLabel" id="StandardPercent">
+                        <property name="label">Calculating</property>
+                      </object>
+                    </child>
                   </object>
                 </child>
                 <child>
@@ -160,6 +175,11 @@
                     <child>
                       <object class="GtkLabel" id="FlatpakStatusLabel">
                         <property name="label">Up to date</property>
+                      </object>
+                    </child>
+                    <child>
+                      <object class="GtkLabel" id="FlatpakPercent">
+                        <property name="label">Calculating</property>
                       </object>
                     </child>
                   </object>

@@ -13,29 +13,204 @@ public class HomeWindow(
     IPrivilegedOperationService privilegedOperationService,
     IUnprivilegedOperationService unprivilegedOperationService) : IShellyWindow
 {
-    private List<AlpmPackageDto> _packages = [];
+    private Box _box = null!;
 
     public Box CreateWindow()
     {
         var builder = Builder.NewFromFile("UiFiles/HomeWindow.ui");
-        var box = (Box)builder.GetObject("HomeWindow")!;
+        _box = (Box)builder.GetObject("HomeWindow")!;
 
         var listBox = (ListBox)builder.GetObject("NewsListBox")!;
         listBox.OnRealize += (sender, args) => { _ = LoadFeedAsync(listBox); };
 
         var columnView = (ColumnView)builder.GetObject("InstalledPackagesView")!;
         columnView.OnRealize += (sender, args) => { _ = LoadPackagesAsync(columnView); };
-        return box;
+
+        var totalAurLabel = (Label)builder.GetObject("TotalAurLabel")!;
+        totalAurLabel.OnRealize += (sender, args) => { _ = LoadAurTotalData(totalAurLabel); };
+
+        var percentAurLabel = (Label)builder.GetObject("AurPercentLabel")!;
+        percentAurLabel.OnRealize += (sender, args) => { _ = LoadAurPercentData(percentAurLabel); };
+
+        var totalPackageLabel = (Label)builder.GetObject("TotalPackagesLabel")!;
+        totalPackageLabel.OnRealize += (sender, args) => { _ = LoadTotalPackageData(totalPackageLabel); };
+
+        var packagePercentLabel = (Label)builder.GetObject("StandardPercent")!;
+        packagePercentLabel.OnRealize += (sender, args) => { _ = LoadTotalPackagePercentData(packagePercentLabel); };
+
+        var totalFlatpakLabel = (Label)builder.GetObject("TotalFlatpakLabel")!;
+        totalFlatpakLabel.OnRealize += (sender, args) => { _ = LoadTotalFlatpak(totalFlatpakLabel); };
+
+        var flatpakPercentLabel = (Label)builder.GetObject("FlatpakPercent")!;
+        flatpakPercentLabel.OnRealize += (sender, args) => { _ = LoadPercentFlatpak(flatpakPercentLabel); };
+
+        var exportSyncButton = (Button)builder.GetObject("ExportSyncButton")!;
+        exportSyncButton.OnClicked += (sender, args) => { _ = ExportSync(); };
+        return _box;
+    }
+
+
+    private async Task ExportSync()
+    {
+        try
+        {
+            var suggestName = $"{DateTime.Now:yyyyMMddHHmmss}_shelly.sync";
+
+            var dialog = FileDialog.New();
+            dialog.SetTitle("Export Sync File");
+            dialog.SetInitialName(suggestName);
+
+            var filter = FileFilter.New();
+            filter.SetName("Sync Files (*.sync)");
+            filter.AddPattern("*.sync");
+
+            var filters = Gio.ListStore.New(FileFilter.GetGType());
+            filters.Append(filter);
+            dialog.SetFilters(filters);
+
+
+            await dialog.SaveAsync((Window)_box.GetRoot()!);
+        }
+        catch (Exception e)
+        {
+            Console.WriteLine(e);
+        }
+    }
+
+    private async Task LoadPercentFlatpak(Label label)
+    {
+        var packages = await unprivilegedOperationService.ListFlatpakPackages();
+        var updates = await unprivilegedOperationService.CheckForApplicationUpdates();
+        try
+        {
+            GLib.Functions.IdleAdd(0, () =>
+            {
+                var ratio = (double)(packages.Count - updates.Flatpaks.Count) / packages.Count * 100;
+                var labelText = $"{ratio:F2} %";
+                label.SetText(labelText);
+                return false;
+            });
+        }
+        catch (Exception e)
+        {
+            Console.WriteLine(e);
+        }
+    }
+
+    private async Task LoadTotalFlatpak(Label label)
+    {
+        var packages = await unprivilegedOperationService.ListFlatpakPackages();
+        try
+        {
+            GLib.Functions.IdleAdd(0, () =>
+            {
+                label.SetText(packages.Count.ToString());
+                return false;
+            });
+        }
+        catch (Exception e)
+        {
+            Console.WriteLine(e);
+        }
+    }
+
+    private async Task LoadTotalPackagePercentData(Label label)
+    {
+        var packages = await privilegedOperationService.GetInstalledPackagesAsync();
+        var updates = await unprivilegedOperationService.CheckForApplicationUpdates();
+        try
+        {
+            GLib.Functions.IdleAdd(0, () =>
+            {
+                var ratio = (double)(packages.Count - updates.Packages.Count) / packages.Count * 100;
+                var labelText = $"{ratio:F2} %";
+                label.SetText(labelText);
+                return false;
+            });
+        }
+        catch (Exception e)
+        {
+            Console.WriteLine(e);
+        }
+    }
+
+    private async Task LoadTotalPackageData(Label label)
+    {
+        var packages = await privilegedOperationService.GetInstalledPackagesAsync();
+        try
+        {
+            GLib.Functions.IdleAdd(0, () =>
+            {
+                PopulateTotalPackageLabel(label, packages);
+                return false;
+            });
+        }
+        catch (Exception e)
+        {
+            Console.WriteLine(e);
+        }
+    }
+
+    private static void PopulateTotalPackageLabel(Label label, List<AlpmPackageDto> packages)
+    {
+        label.SetText(packages.Count.ToString());
+    }
+
+    private async Task LoadAurPercentData(Label label)
+    {
+        var aurPackages = await privilegedOperationService.GetAurInstalledPackagesAsync();
+        var updates = await unprivilegedOperationService.CheckForApplicationUpdates();
+        try
+        {
+            GLib.Functions.IdleAdd(0, () =>
+            {
+                PopulateAurPercentLabel(label, aurPackages, updates);
+                return false;
+            });
+        }
+        catch (Exception e)
+        {
+            Console.WriteLine(e);
+        }
+    }
+
+    private static void PopulateAurPercentLabel(Label label, List<AurPackageDto> packages, SyncModel syncModel)
+    {
+        var ratio = (double)(packages.Count - syncModel.Aur.Count) / packages.Count * 100;
+        var labelText = $"{ratio:F2} %";
+        label.SetText(labelText);
+    }
+
+    private async Task LoadAurTotalData(Label label)
+    {
+        var aurPackages = await privilegedOperationService.GetAurInstalledPackagesAsync();
+        try
+        {
+            GLib.Functions.IdleAdd(0, () =>
+            {
+                PopulateAurTotalLabel(label, aurPackages);
+                return false;
+            });
+        }
+        catch (Exception e)
+        {
+            Console.WriteLine(e);
+        }
+    }
+
+    private static void PopulateAurTotalLabel(Label label, List<AurPackageDto> packages)
+    {
+        label.SetText(packages.Count.ToString());
     }
 
     private async Task LoadPackagesAsync(ColumnView columnView)
     {
+        var packages = await privilegedOperationService.GetInstalledPackagesAsync();
         try
         {
-            _packages = await privilegedOperationService.GetInstalledPackagesAsync();
             GLib.Functions.IdleAdd(0, () =>
             {
-                PopulateInstalledPackages(columnView, _packages);
+                PopulateInstalledPackages(columnView, packages);
                 return false;
             });
         }
