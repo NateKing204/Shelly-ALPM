@@ -17,6 +17,10 @@ sealed class Program
 
         application.OnActivate += (sender, args) =>
         {
+            var cssProvider = CssProvider.New();
+            cssProvider.LoadFromPath("Assets/style.css");
+            StyleContext.AddProviderForDisplay(Gdk.Display.GetDefault()!, cssProvider, 800);
+
             var mainBuilder = Builder.NewFromFile("UiFiles/MainWindow.ui");
             var window = (ApplicationWindow)mainBuilder.GetObject("MainWindow")!;
 

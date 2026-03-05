@@ -23,8 +23,8 @@ public class HomeWindow(
         var listBox = (ListBox)builder.GetObject("NewsListBox")!;
         listBox.OnRealize += (sender, args) => { _ = LoadFeedAsync(listBox); };
 
-        var columnView = (ColumnView)builder.GetObject("InstalledPackagesView")!;
-        columnView.OnRealize += (sender, args) => { _ = LoadPackagesAsync(columnView); };
+        var listView = (ListView)builder.GetObject("InstalledPackagesView")!;
+        listView.OnRealize += (sender, args) => { _ = LoadPackagesAsync(listView); };
 
         var totalAurLabel = (Label)builder.GetObject("TotalAurLabel")!;
         totalAurLabel.OnRealize += (sender, args) => { _ = LoadAurTotalData(totalAurLabel); };
@@ -203,14 +203,14 @@ public class HomeWindow(
         label.SetText(packages.Count.ToString());
     }
 
-    private async Task LoadPackagesAsync(ColumnView columnView)
+    private async Task LoadPackagesAsync(ListView listView)
     {
         var packages = await privilegedOperationService.GetInstalledPackagesAsync();
         try
         {
             GLib.Functions.IdleAdd(0, () =>
             {
-                PopulateInstalledPackages(columnView, packages);
+                PopulateInstalledPackages(listView, packages);
                 return false;
             });
         }
@@ -220,47 +220,90 @@ public class HomeWindow(
         }
     }
 
-    private static void PopulateInstalledPackages(ColumnView columnView, List<AlpmPackageDto> packages)
+    private static void PopulateInstalledPackages(ListView listView, List<AlpmPackageDto> packages)
     {
         var store = Gio.ListStore.New(AlpmPackageGObject.GetGType());
         foreach (var pkg in packages)
-        {
             store.Append(new AlpmPackageGObject() { Package = pkg });
-        }
 
-        var viewModel = NoSelection.New(store);
-        columnView.SetModel(viewModel);
-        // Just append columns directly — no need to remove if none exist yet
-        columnView.AppendColumn(CreateColumn("Name", obj => obj.Package?.Name ?? ""));
-        columnView.AppendColumn(CreateColumn("Version", obj => obj.Package?.Version ?? ""));
-        columnView.AppendColumn(CreateColumn("Description", obj => obj.Package?.Description ?? ""));
-    }
-
-    private static ColumnViewColumn CreateColumn(string title, Func<AlpmPackageGObject, string> getText)
-    {
         var factory = SignalListItemFactory.New();
 
         factory.OnSetup += (_, args) =>
         {
             var listItem = (ListItem)args.Object;
-            var label = Label.New("");
-            label.Halign = Align.Start;
-            label.Ellipsize = Pango.EllipsizeMode.End;
-            listItem.SetChild(label);
+            listItem.SetChild(BuildRow());
         };
 
         factory.OnBind += (_, args) =>
         {
             var listItem = (ListItem)args.Object;
-            var item = (AlpmPackageGObject)listItem.GetItem()!;
-            var label = (Label)listItem.GetChild()!;
-            label.SetText(getText(item));
+            var pkg = ((AlpmPackageGObject)listItem.GetItem()!).Package!;
+            var grid = (Grid)listItem.GetChild()!;
+
+            FindLabel(grid, "name").SetMarkup($"<b>{GLib.Markup.EscapeText(pkg.Name)}</b>");
+            FindLabel(grid, "version").SetText(pkg.Version);
+            FindLabel(grid, "size").SetText("130mb");
+            FindLabel(grid, "reason").SetText(pkg.InstallReason);
+            FindLabel(grid, "date").SetText(pkg.InstallDate.ToString() ?? string.Empty);
         };
 
-        var column = ColumnViewColumn.New(title, factory);
-        column.SetResizable(true);
-        column.SetExpand(title == "Description"); // let Description expand
-        return column;
+        listView.SetModel(NoSelection.New(store));
+        listView.SetFactory(factory);
+    }
+    
+    private static Label FindLabel(Grid grid, string name)
+    {
+        var child = grid.GetFirstChild();
+        while (child != null)
+        {
+            if (child is Label label && label.Name == name)
+                return label;
+            child = child.GetNextSibling();
+        }
+        throw new Exception($"Label '{name}' not found");
+    }
+
+    private static Grid BuildRow()
+    {
+        var grid = Grid.New();
+        grid.MarginStart = 6;
+        grid.MarginEnd = 8;
+        grid.MarginTop = 2;
+        grid.MarginBottom = 2;
+
+        var name = Label.New("");
+        name.Name = "name";
+        name.Halign = Align.Start;
+        name.Hexpand = true;
+        name.Wrap = true;
+
+        var version = Label.New("");
+        version.Name = "version";
+        version.Halign = Align.Start;
+        version.AddCssClass("dim-label");
+
+        var size = Label.New("");
+        size.Name = "size";
+        size.Halign = Align.Start;
+        size.AddCssClass("dim-label");
+
+        var reason = Label.New("");
+        reason.Name = "reason";
+        reason.Halign = Align.End;
+        reason.AddCssClass("dim-label");
+
+        var date = Label.New("");
+        date.Name = "date";
+        date.Halign = Align.End;
+        date.AddCssClass("dim-label");
+
+        grid.Attach(name,    0, 0, 2, 1);
+        grid.Attach(reason,  1, 1, 1, 1);
+        grid.Attach(version, 0, 1, 1, 1);
+        grid.Attach(date,    1, 2, 1, 1);
+        grid.Attach(size,    0, 2, 1, 1);
+
+        return grid;
     }
 
     private static async Task LoadFeedAsync(ListBox listBox)
@@ -310,6 +353,7 @@ public class HomeWindow(
 
             var title = Label.New(item.Title);
             title.Halign = Align.Start;
+            title.Wrap = true;
             title.AddCssClass("heading");
 
             var date = Label.New(item.PubDate);
@@ -319,7 +363,6 @@ public class HomeWindow(
             var desc = Label.New(item.Description);
             desc.Halign = Align.Start;
             desc.Wrap = true;
-            desc.SetMaxWidthChars(80);
 
             vbox.Append(title);
             vbox.Append(date);

@@ -64,37 +64,100 @@
                 <property name="spacing">4</property>
                 <child>
                   <object class="GtkMenuButton" id="PackagesMenuButton">
-                    <property name="label">Packages</property>
-                    <property name="icon-name">package-x-generic-symbolic</property>
                     <property name="menu-model">PackagesMenu</property>
+                    <property name="has-frame">false</property>
+                    <style>
+                      <class name="nav-button"/>
+                    </style>
+                  
+                    <child>
+                      <object class="GtkBox">
+                        <property name="orientation">horizontal</property>
+                        <property name="spacing">8</property>
+                        <child>
+                          <object class="GtkImage">
+                            <property name="icon-name">package-x-generic-symbolic</property>
+                          </object>
+                        </child>
+                        <child>
+                          <object class="GtkLabel">
+                            <property name="label">Packages</property>
+                          </object>
+                        </child>
+                      </object>
+                    </child>
                   </object>
                 </child>
                 <child>
                   <object class="GtkMenuButton" id="AurMenuButton">
-                    <property name="label">AUR</property>
-                    <property name="icon-name">software-update-available-symbolic</property>
                     <property name="menu-model">AurMenu</property>
+                    <property name="has-frame">false</property>
+                    <style>
+                      <class name="nav-button"/>
+                    </style>
+                   
+                    <child>
+                      <object class="GtkBox">
+                        <property name="orientation">horizontal</property>
+                        <property name="spacing">8</property>
+                        <child>
+                          <object class="GtkImage">
+                            <property name="icon-name">software-update-available-symbolic</property>
+                          </object>
+                        </child>
+                        <child>
+                          <object class="GtkLabel">
+                            <property name="label">AUR</property>
+                          </object>
+                        </child>
+                      </object>
+                    </child>
                   </object>
                 </child>
                 <child>
                   <object class="GtkMenuButton" id="FlatpakMenuButton">
-                    <property name="label">Flatpak</property>
-                    <property name="icon-name">package-x-generic-symbolic</property>
                     <property name="menu-model">FlatpakMenu</property>
+                    <property name="has-frame">false</property>
+                    <style>
+                      <class name="nav-button"/>
+                    </style>
+                   
+                    <child>
+                      <object class="GtkBox">
+                        <property name="orientation">horizontal</property>
+                        <property name="spacing">8</property>
+                        <child>
+                          <object class="GtkImage">
+                            <property name="icon-name">package-x-generic-symbolic</property>
+                          </object>
+                        </child>
+                        <child>
+                          <object class="GtkLabel">
+                            <property name="label">Flatpak</property>
+                          </object>
+                        </child>
+                      </object>
+                    </child>
                   </object>
                 </child>
               </object>
             </child>
             <child>
               <object class="GtkButton" id="HomeButton">
-                <property name="label">Home</property>
                 <property name="icon-name">go-home-symbolic</property>
+                <property name="has-frame">false</property>
+                <style>
+                  <class name="nav-button"/>
+                </style>
               </object>
             </child>
             <child type="end">
               <object class="GtkButton" id="SettingsButton">
-                <property name="label">Settings</property>
                 <property name="icon-name">emblem-system-symbolic</property>
+                <property name="has-frame">false</property>
+                <style>
+                  <class name="nav-button"/>
+                </style>
               </object>
             </child>
           </object>
