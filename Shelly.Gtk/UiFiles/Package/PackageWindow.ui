@@ -13,12 +13,13 @@
         <property name="margin-top">20</property>
         <property name="orientation">vertical</property>
         <property name="spacing">15</property>
+        <property name="valign">fill</property>
+        <property name="vexpand">true</property>
         <child>
           <object class="GtkBox">
-            <property name="halign">baseline</property>
+            <property name="halign">center</property>
             <property name="orientation">horizontal</property>
             <property name="spacing">8</property>
-            <property name="valign">baseline-center</property>
             <child>
               <object class="GtkButton" id="install_button">
                 <property name="halign">start</property>

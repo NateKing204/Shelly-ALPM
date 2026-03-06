@@ -2,5 +2,5 @@
 <!DOCTYPE cambalache-project SYSTEM "cambalache-project.dtd">
 <!-- Created with Cambalache 0.96.3 -->
 <cambalache-project version="0.96.0" target_tk="gtk-4.0">
-  <ui filename="PackageWindow.ui" sha256="3146163f1205694f7459d396403e93505abdd2b85a2e90d2e409f04b304b21c2"/>
+  <ui filename="PackageWindow.ui" sha256="2feb2bf892ee80b40864c432338519556c08ca7faec36f18f536efda143d3fdd"/>
 </cambalache-project>
