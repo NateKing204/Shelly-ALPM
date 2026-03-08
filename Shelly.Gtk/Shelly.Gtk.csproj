@@ -9,13 +9,18 @@
         <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
         <RuntimeIdentifier>linux-x64</RuntimeIdentifier>
         <InvariantGlobalization>true</InvariantGlobalization>
+        <StripSymbols>true</StripSymbols>
+        <TrimMode>full</TrimMode>
+        <IlcFoldIdenticalMethodBodies>true</IlcFoldIdenticalMethodBodies>
+        <IlcGenerateStackTraceData>false</IlcGenerateStackTraceData>
+        <OptimizationPreference>Speed</OptimizationPreference>
     </PropertyGroup>
 
     <PropertyGroup>
         <Version>0.0.1</Version>
-        <AssemblyName>shelly-gtk</AssemblyName>
+        <AssemblyName>shelly-ui</AssemblyName>
         <AssemblyVersion>0.0.1</AssemblyVersion>
-        <AssemblyTitle>Shelly GTK</AssemblyTitle>
+        <AssemblyTitle>Shelly GTK UI</AssemblyTitle>
         <Description>Shelly GTK is a arch linux package manager</Description>
         <Company>ZC Development</Company>
         <Product>Shelly CLI by ZC Development</Product>

@@ -1,13 +1,14 @@
 # Maintainer: Zoey Bauer <zoey.erin.bauer@gmail.com>
 # Maintainer: Caroline Snyder <hirpeng@gmail.com>
-pkgname=shelly
-pkgver=1.5.6
+pkgname=shelly-git
+pkgver=1.5.6.r0.g0000000
 pkgrel=1
-pkgdesc="Shelly: A Modern Arch Package Manager"
+pkgdesc="Shelly: A Modern Arch Package Manager (git version)"
 arch=('x86_64')
 url="https://github.com/ZoeyErinBauer/Shelly-ALPM"
 license=('GPL-3.0-only')
 provides=('shelly')
+conflicts=('shelly' 'shelly-bin')
 depends=(
     'pacman'
     'gtk4'
@@ -19,20 +20,24 @@ depends=(
     'hicolor-icon-theme'
     'dbus'
     'glibc'
-    'glib2'
 )
 optdepends=(
-    'flatpak:  For supporting flatpak implementation.'
+    'flatpak: For supporting flatpak implementation.'
 )
-makedepends=('dotnet-sdk-10.0')
+makedepends=('dotnet-sdk-10.0' 'git')
 
-# Source tarball from GitHub release
-source=("${pkgname}-${pkgver}.tar.gz::https://github.com/ZoeyErinBauer/Shelly-ALPM/archive/v${pkgver}.tar.gz")
+source=("${pkgname}::git+https://github.com/ZoeyErinBauer/Shelly-ALPM.git")
 
-sha256sums=('a00b159faa548a37663a552ab24159788cd2201ce7c717218e21567744b6a3a1')
+sha256sums=('SKIP')
+
+pkgver() {
+  cd "$srcdir/${pkgname}"
+  git describe --long --tags 2>/dev/null | sed 's/^v//;s/\([^-]*-g\)/r\1/;s/-/./g' || \
+    printf "r%s.%s" "$(git rev-list --count HEAD)" "$(git rev-parse --short HEAD)"
+}
 
 build() {
-  cd "$srcdir/Shelly-ALPM-${pkgver}"
+  cd "$srcdir/${pkgname}"
 
   dotnet publish Shelly-CLI/Shelly-CLI.csproj -c Release -o out-cli --nologo -p:InstructionSet=${INSTRUCTIONS:=x86-64}
   dotnet publish Shelly.Gtk/Shelly.Gtk.csproj -c Release -r linux-x64 -o out --nologo -p:InstructionSet=${INSTRUCTIONS:=x86-64}
@@ -40,7 +45,7 @@ build() {
 }
 
 package() {
-  cd "$srcdir/Shelly-ALPM-${pkgver}"
+  cd "$srcdir/${pkgname}"
 
   # Install Shelly.Gtk binary
   install -Dm755 out/Shelly.Gtk "$pkgdir/usr/bin/shelly-ui"
