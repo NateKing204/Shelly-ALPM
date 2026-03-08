@@ -7,7 +7,6 @@
         <Nullable>enable</Nullable>
         <PublishAot>true</PublishAot>
         <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
-        <PublishSingleFile>true</PublishSingleFile>
         <RuntimeIdentifier>linux-x64</RuntimeIdentifier>
         <InvariantGlobalization>true</InvariantGlobalization>
     </PropertyGroup>
@@ -29,25 +28,15 @@
     <ItemGroup>
         <PackageReference Include="GirCore.Gtk-4.0" Version="0.7.0"/>
         <PackageReference Include="GirCore.GObject-2.0.Integration" Version="0.7.0"/>
+        <PackageReference Include="LiteDB" Version="6.0.0-prerelease.75" />
+        <PackageReference Include="Microsoft.Extensions.DependencyInjection" Version="10.0.1" />
+        <PackageReference Include="Microsoft.Extensions.DependencyInjection.Abstractions" Version="10.0.1" />
+        <PackageReference Include="Tmds.DBus.Protocol" Version="0.90.3" />
     </ItemGroup>
     <ItemGroup>
         <EmbeddedResource Include="Assets\style.css" />
         <Content Include="Assets\shellylogo.png">
             <CopyToOutputDirectory>Always</CopyToOutputDirectory>
         </Content>
-    </ItemGroup>
-    <ItemGroup>
-        <Reference Include="LiteDB">
-            <HintPath>..\..\..\.nuget\packages\litedb\6.0.0-prerelease.75\lib\net8.0\LiteDB.dll</HintPath>
-        </Reference>
-        <Reference Include="Microsoft.Extensions.DependencyInjection">
-            <HintPath>..\..\..\.nuget\packages\microsoft.extensions.dependencyinjection\10.0.1\lib\net10.0\Microsoft.Extensions.DependencyInjection.dll</HintPath>
-        </Reference>
-        <Reference Include="Microsoft.Extensions.DependencyInjection.Abstractions">
-            <HintPath>..\..\..\.nuget\packages\microsoft.extensions.dependencyinjection.abstractions\10.0.1\lib\net10.0\Microsoft.Extensions.DependencyInjection.Abstractions.dll</HintPath>
-        </Reference>
-        <Reference Include="Tmds.DBus.Protocol">
-          <HintPath>..\..\..\.nuget\packages\tmds.dbus.protocol\0.90.3\lib\net9.0\Tmds.DBus.Protocol.dll</HintPath>
-        </Reference>
     </ItemGroup>
 </Project>
