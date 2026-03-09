@@ -10,6 +10,7 @@ using Shelly.Gtk.Helpers;
 using Shelly.Gtk.Windows.Packages;
 using Settings = Shelly.Gtk.Windows.Settings;
 
+
 namespace Shelly.Gtk;
 
 sealed class Program
@@ -76,6 +77,28 @@ sealed class Program
 
             aurMenuButton.Visible = initialConfig.AurEnabled;
             flatpakMenuButton.Visible = initialConfig.FlatPackEnabled;
+           
+            //Setting window height
+            window.DefaultHeight = double.ConvertToInteger<int>(initialConfig.WindowHeight);
+            window.DefaultWidth = double.ConvertToInteger<int>(initialConfig.WindowWidth);
+            uint resizeTimerId = 0;
+
+            window.OnNotify += (_, args) =>
+            {
+                if (args.Pspec.GetName() is not ("default-width" or "default-height")) return;
+                if (resizeTimerId != 0)
+                    GLib.Functions.SourceRemove(resizeTimerId);
+
+                resizeTimerId = GLib.Functions.TimeoutAdd(0, 500, () =>
+                {
+                    var config = configService.LoadConfig();
+                    config.WindowWidth = window.DefaultWidth;
+                    config.WindowHeight = window.DefaultHeight;
+                    configService.SaveConfig(config);
+                    resizeTimerId = 0;
+                    return false;
+                });
+            };
 
             configService.ConfigSaved += (_, updatedConfig) =>
             {
