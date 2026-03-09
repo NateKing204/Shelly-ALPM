@@ -38,6 +38,7 @@ public class PackageInstall(IPrivilegedOperationService privilegedOperationServi
         var repositoryColumn = (ColumnViewColumn)builder.GetObject("repository_column")!;
         var installButton = (Button)builder.GetObject("install_button")!;
         var localInstallButton = (Button)builder.GetObject("install_local_button")!;
+        var appImageButton = (Button)builder.GetObject("install_appimage_button")!;
         var searchEntry = (SearchEntry)builder.GetObject("search_entry")!;
         _listStore = Gio.ListStore.New(AlpmPackageGObject.GetGType());
         _filter = CustomFilter.New(FilterPackage);
@@ -67,6 +68,7 @@ public class PackageInstall(IPrivilegedOperationService privilegedOperationServi
         };
         installButton.OnClicked += (_, _) => { _ = InstallSelectedAsync(); };
         localInstallButton.OnClicked += (_, _) => { _ = InstallLocalPackage(); };
+        appImageButton.OnClicked += (_, _) => { _ = InstallAppImage(); };
 
         return _overlay;
     }
@@ -371,8 +373,6 @@ public class PackageInstall(IPrivilegedOperationService privilegedOperationServi
     
      private async Task InstallLocalPackage()
     {
-        
-
         try
         {
             var dialog = FileDialog.New();
@@ -407,6 +407,43 @@ public class PackageInstall(IPrivilegedOperationService privilegedOperationServi
         finally
         {
            lockoutService.Hide();
+        }
+    }
+     
+    private async Task InstallAppImage()
+    {
+        try
+        {
+            var dialog = FileDialog.New();
+            dialog.SetTitle("Install App Image");
+
+            var filter = FileFilter.New();
+            filter.SetName("Local AppImage files (\"*.AppImage\"");
+            filter.AddPattern("*.AppImage");
+
+            var filters = Gio.ListStore.New(FileFilter.GetGType());
+            filters.Append(filter);
+            dialog.SetFilters(filters);
+
+            var file = await dialog.OpenAsync((Window)_overlay.GetRoot()!);
+
+            if (file is not null)
+            {
+                lockoutService.Show($"Installing AppImage...");
+                var result = await privilegedOperationService.InstallAppImageAsync(file.GetPath()!);
+                if (!result.Success)
+                {
+                    Console.WriteLine($"Failed to install local package: {result.Error}");
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Failed to install local package: {ex.Message}");
+        }
+        finally
+        {
+            lockoutService.Hide();
         }
     }
 

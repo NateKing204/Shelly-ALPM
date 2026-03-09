@@ -133,6 +133,12 @@ public class PrivilegedOperationService : IPrivilegedOperationService
             filePath);
     }
 
+    public async Task<OperationResult> InstallAppImageAsync(string filePath)
+    {
+        return await ExecutePrivilegedWithNoConfirmCheck("Install local package", "install-appimage", "--location",
+            filePath);
+    }
+
     public async Task<OperationResult> RemovePackagesAsync(IEnumerable<string> packages, bool isCascade, bool isCleanup)
     {
         var packageArgs = string.Join(" ", packages);

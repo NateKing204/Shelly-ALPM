@@ -25,8 +25,6 @@ sealed class Program
         
         application.OnActivate += (sender, _) =>
         {
-            //Tray service will need to be update to point at GTK Install
-            //or tray service will need to know if avalonia or GTK started it.
             if(serviceProvider!.GetService<IConfigService>()!.LoadConfig().TrayEnabled)
                 TrayStartService.Start();
             

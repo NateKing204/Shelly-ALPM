@@ -148,6 +148,11 @@ public class Program
                 .WithExample("install-local", "--location", "/path/to/package.pkg.tar.gz", "--no-confirm")
                 .WithExample("install-local", "-l", "/path/to/package.pkg.tar.gz", "-n");
 
+            config.AddCommand<AppImageInstallCommand>("install-appimage")
+                .WithDescription("Install an appimage file")
+                .WithExample("install-local", "--location", "/path/to/package.pkg.tar.zst")
+                .WithExample("install-local", "-l", "/path/to/package.pkg.tar.zst");
+
             config.AddCommand<RemoveCommand>("remove")
                 .WithDescription("Remove one or more packages")
                 .WithExample("remove", "firefox")
