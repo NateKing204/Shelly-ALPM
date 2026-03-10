@@ -462,6 +462,11 @@ public class PackageInstall(
             finally
             {
                 lockoutService.Hide();
+                var args = new ToastMessageEventArgs(
+                    $"Installed {selectedPackages.Count} Package(s)"
+                );
+
+                genericQuestionService.RaiseToastMessage(args);
             }
         }
     }
@@ -502,6 +507,11 @@ public class PackageInstall(
         finally
         {
             lockoutService.Hide();
+            
+            var args = new ToastMessageEventArgs(
+                $"Installed local package"
+            );
+            genericQuestionService.RaiseToastMessage(args);
         }
     }
 
@@ -539,6 +549,12 @@ public class PackageInstall(
         finally
         {
             lockoutService.Hide();
+            
+            var args = new ToastMessageEventArgs(
+                $"App Image installed"
+            );
+
+            genericQuestionService.RaiseToastMessage(args);
         }
     }
 

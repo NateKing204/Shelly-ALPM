@@ -149,6 +149,12 @@ public class FlatpakInstall(IUnprivilegedOperationService unprivilegedOperationS
         finally
         {
             lockoutService.Hide();
+            
+            var args = new ToastMessageEventArgs(
+                $"Installed Flatpak"
+            );
+
+            genericQuestionService.RaiseToastMessage(args);
         }
     }
 
@@ -219,6 +225,11 @@ public class FlatpakInstall(IUnprivilegedOperationService unprivilegedOperationS
         finally
         {
             lockoutService.Hide();
+            
+            var args = new ToastMessageEventArgs(
+                $"Installed Flatpak"
+            );
+            genericQuestionService.RaiseToastMessage(args);
         }
     }
 
