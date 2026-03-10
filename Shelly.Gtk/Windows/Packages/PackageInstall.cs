@@ -27,6 +27,8 @@ public class PackageInstall(
     private string _searchText = string.Empty;
     private List<AlpmPackageDto> _packages = [];
     private List<string> _groups = [];
+    private StringList _groupsStringList = null!;
+    private string _selectedGroup = "Any";
 
     private Dictionary<ColumnViewCell, (SignalHandler<CheckButton> OnToggled, EventHandler OnExternalToggle)>
         _checkBinding =
@@ -71,6 +73,7 @@ public class PackageInstall(
         _searchEntry = (SearchEntry)_builder.GetObject("search_entry")!;
         _detailRevealer = (Revealer)_builder.GetObject("detail_revealer")!;
         _detailBox = (Box)_builder.GetObject("detail_box")!;
+        _groupDropDown = (DropDown)_builder.GetObject("grouping_selection")!;
 
         _listStore = Gio.ListStore.New(AlpmPackageGObject.GetGType());
         _filter = CustomFilter.New(FilterPackage);
@@ -116,6 +119,16 @@ public class PackageInstall(
         _localInstallButton.OnClicked += (_, _) => { _ = InstallLocalPackage(); };
         _appImageButton.OnClicked += (_, _) => { _ = InstallAppImage(); };
 
+        _groupDropDown.OnNotify += (sender, args) =>
+        {
+            if (args.Pspec.GetName() == "selected")
+            {
+                var idx = _groupDropDown.GetSelected();
+                var item = (StringObject)_groupDropDown.GetModel()!.GetObject(idx)!;
+                _selectedGroup = item.GetString();
+                ApplyFilter();
+            }
+        };
         return _overlay;
     }
 
@@ -340,6 +353,10 @@ public class PackageInstall(
         try
         {
             _packages = await privilegedOperationService.GetAvailablePackagesAsync();
+            _groups = _packages.SelectMany(x => x.Groups).Distinct().ToList();
+            _groups.Insert(0, "Any");
+            _groupsStringList = StringList.New(_groups.ToArray());
+            _groupDropDown.SetModel(_groupsStringList);
             var installedPackages = await privilegedOperationService.GetInstalledPackagesAsync();
             var installedNames = new HashSet<string>(installedPackages?.Select(x => x.Name) ?? []);
 
@@ -390,6 +407,11 @@ public class PackageInstall(
     {
         if (obj is AlpmPackageGObject pkgObj && pkgObj.Package != null)
         {
+            if (_selectedGroup != "Any" && !pkgObj.Package.Groups.Contains(_selectedGroup))
+            {
+                return false;
+            }
+            
             if (string.IsNullOrWhiteSpace(_searchText))
                 return true;
 
