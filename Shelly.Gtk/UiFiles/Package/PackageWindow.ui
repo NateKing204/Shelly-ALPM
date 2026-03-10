@@ -156,8 +156,10 @@
                         <property name="hscrollbar-policy">never</property>
                         <property name="overlay-scrolling">false</property>
                         <property name="propagate-natural-height">True</property>
+                            <property name="propagate-natural-height">True</property>
+                            <property name="propagate-natural-width">True</property>
                         <property name="vexpand">true</property>
-                        <property name="width-request">550</property>
+                        <property name="width-request">250</property>
                         <property name="window-placement">top-right</property>
                         <child>
                           <object class="GtkBox" id="detail_box">

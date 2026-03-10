@@ -27,8 +27,9 @@ public class PackageInstall(
     private string _searchText = string.Empty;
     private List<AlpmPackageDto> _packages = [];
 
-    private Dictionary<ColumnViewCell, (SignalHandler<CheckButton> OnToggled, EventHandler OnExternalToggle)> _checkBinding =
-        [];
+    private Dictionary<ColumnViewCell, (SignalHandler<CheckButton> OnToggled, EventHandler OnExternalToggle)>
+        _checkBinding =
+            [];
 
     private SignalListItemFactory _checkFactory = null!;
     private SignalListItemFactory _nameFactory = null!;
@@ -118,8 +119,7 @@ public class PackageInstall(
 
     private void ShowPackageDetails(AlpmPackageGObject pkgObj)
     {
-        _detailBox.WidthRequest = 55;
-        
+
         if (pkgObj.Package == null) return;
 
         _currentDetailPkg = pkgObj;
@@ -137,13 +137,13 @@ public class PackageInstall(
             labelWidget.AddCssClass("dim-label");
             labelWidget.Halign = Align.Start;
             labelWidget.Valign = Align.Start;
-            labelWidget.WidthRequest = 55;
+            labelWidget.WidthRequest = 70;
 
             var valueWidget = Label.New(value);
             valueWidget.Halign = Align.Start;
             valueWidget.Wrap = true;
             valueWidget.WrapMode = Pango.WrapMode.WordChar;
-            valueWidget.Hexpand = false;
+            //valueWidget.Hexpand = true;
             valueWidget.MaxWidthChars = 20;
             valueWidget.Xalign = 0;
 
@@ -158,7 +158,28 @@ public class PackageInstall(
         AddDetail("Repository", pkg.Repository);
         AddDetail("Size", SizeHelpers.FormatSize(pkg.InstalledSize));
         if (!string.IsNullOrEmpty(pkg.Url))
-            AddDetail("URL", pkg.Url);
+        {
+            var row = Box.New(Orientation.Horizontal, 4);
+            var labelWidget = Label.New("URL:");
+            labelWidget.AddCssClass("dim-label");
+            labelWidget.Halign = Align.Start;
+            labelWidget.Valign = Align.Start;
+            labelWidget.WidthRequest = 70;
+
+            var valueWidget = Label.New(null);
+            var escaped = GLib.Functions.MarkupEscapeText(pkg.Url, -1);
+            valueWidget.SetMarkup($"<a href=\"{escaped}\">{escaped}</a>");
+            valueWidget.Halign = Align.Start;
+            valueWidget.Wrap = true;
+            valueWidget.WrapMode = Pango.WrapMode.WordChar;
+            valueWidget.MaxWidthChars = 20;
+            valueWidget.Xalign = 0;
+
+            row.Append(labelWidget);
+            row.Append(valueWidget);
+            _detailBox.Append(row);
+        }
+
         if (pkg.Depends.Count > 0)
             AddDetail("Depends", string.Join(", ", pkg.Depends));
         if (pkg.OptDepends.Count > 0)
