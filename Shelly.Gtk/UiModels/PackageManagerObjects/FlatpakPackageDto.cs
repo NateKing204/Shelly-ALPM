@@ -43,18 +43,3 @@ public record FlatpakPackageDto
 
     [JsonPropertyName("categories")] public List<string> Categories { get; set; }
 }
-
-public record AppstreamRelease
-{
-    [JsonPropertyName("version")]
-    public string Version { get; set; } = string.Empty;
-
-    [JsonPropertyName("type")]
-    public string Type { get; set; } = string.Empty;
-
-    [JsonPropertyName("timestamp")]
-    public long Timestamp { get; set; }
-
-    [JsonPropertyName("description")]
-    public string Description { get; set; } = string.Empty;
-}

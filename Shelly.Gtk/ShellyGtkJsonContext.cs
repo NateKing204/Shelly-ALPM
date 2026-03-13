@@ -32,6 +32,8 @@ namespace Shelly.Gtk;
 [JsonSerializable(typeof(List<FlatpakPackageDto>))]
 [JsonSerializable(typeof(List<AppstreamRelease>))]
 [JsonSerializable(typeof(AppstreamRelease))]
+[JsonSerializable(typeof(List<AppstreamApp>))]
+[JsonSerializable(typeof(AppstreamApp))]
 [JsonSerializable(typeof(FlatpakApiResponse))]
 [JsonSerializable(typeof(Hit))]
 [JsonSerializable(typeof(List<Hit>))]

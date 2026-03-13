@@ -13,7 +13,7 @@ public interface IUnprivilegedOperationService
 
     Task<List<FlatpakPackageDto>> ListFlatpakUpdates();
 
-    Task<List<FlatpakPackageDto>> ListAppstreamFlatpak();
+    Task<List<AppstreamApp>> ListAppstreamFlatpak();
 
     Task<UnprivilegedOperationResult> FlatpakUpgrade();
 

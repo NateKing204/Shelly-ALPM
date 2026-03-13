@@ -129,10 +129,10 @@ public class UnprivilegedOperationService : IUnprivilegedOperationService
         return await ExecuteUnprivilegedCommandAsync("Remove packages", "flatpak remove", packageArgs);
     }
 
-    public async Task<List<FlatpakPackageDto>> ListAppstreamFlatpak()
+    public async Task<List<AppstreamApp>> ListAppstreamFlatpak()
     {
         var result =
-            await ExecuteUnprivilegedCommandAsync("Get local appstream", "flatpak get-remote-appstream", "--json");
+            await ExecuteUnprivilegedCommandAsync("Get local appstream", "flatpak get-remote-appstream", "flathub", "--json");
 
         if (!result.Success || string.IsNullOrWhiteSpace(result.Output))
         {
@@ -148,13 +148,13 @@ public class UnprivilegedOperationService : IUnprivilegedOperationService
                 if (trimmedLine.StartsWith("[") && trimmedLine.EndsWith("]"))
                 {
                     var updates = System.Text.Json.JsonSerializer.Deserialize(trimmedLine,
-                        ShellyGtkJsonContext.Default.ListFlatpakPackageDto);
+                        ShellyGtkJsonContext.Default.ListAppstreamApp);
                     return updates ?? [];
                 }
             }
 
             var allUpdates = System.Text.Json.JsonSerializer.Deserialize(StripBom(result.Output.Trim()),
-                ShellyGtkJsonContext.Default.ListFlatpakPackageDto);
+                ShellyGtkJsonContext.Default.ListAppstreamApp);
             return allUpdates ?? [];
         }
         catch (Exception ex)
