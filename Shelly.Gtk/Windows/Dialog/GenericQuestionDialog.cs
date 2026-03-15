@@ -11,7 +11,7 @@ public static class GenericQuestionDialog
         var box = Box.New(Orientation.Vertical, 12);
         box.SetHalign(Align.Center);
         box.SetValign(Align.Center);
-        box.SetSizeRequest(400, -1);
+        box.SetSizeRequest(640, -1);
         box.SetMarginTop(20);
         box.SetMarginBottom(20);
         box.SetMarginStart(20);

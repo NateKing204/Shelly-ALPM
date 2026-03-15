@@ -338,17 +338,8 @@ public class PackageUpdate(
             return string.Empty;
         }
 
-        var maxNameLength = 0;
-        foreach (var package in packages)
-        {
-            if (package.Name.Length > maxNameLength)
-            {
-                maxNameLength = package.Name.Length;
-            }
-        }
-
         return string.Join(Environment.NewLine, packages.Select(package =>
-            $"{package.Name.PadRight(maxNameLength)}  {package.CurrentVersion} -> {package.NewVersion}"));
+            $"{package.Name}  {package.CurrentVersion} -> {package.NewVersion}"));
     }
 
     public void Dispose()
