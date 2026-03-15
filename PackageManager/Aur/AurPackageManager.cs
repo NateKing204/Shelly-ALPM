@@ -279,7 +279,6 @@ public class AurPackageManager(string? configPath = null)
     public async Task InstallPackages(List<string> packageNames)
     {
         var totalCount = packageNames.Count;
-        var failedPackages = new List<string>();
         for (var i = 0; i < packageNames.Count; i++)
         {
             var packageName = packageNames[i];
@@ -304,7 +303,6 @@ public class AurPackageManager(string? configPath = null)
                     Status = PackageProgressStatus.Failed,
                     Message = "Failed to download package"
                 });
-                failedPackages.Add(packageName);
                 continue;
             }
 
@@ -423,7 +421,6 @@ public class AurPackageManager(string? configPath = null)
                     Status = PackageProgressStatus.Failed,
                     Message = "Failed to build package with makepkg"
                 });
-                failedPackages.Add(packageName);
                 continue;
             }
 
@@ -439,7 +436,6 @@ public class AurPackageManager(string? configPath = null)
                     Status = PackageProgressStatus.Failed,
                     Message = "No package file found after build"
                 });
-                failedPackages.Add(packageName);
                 continue;
             }
 
@@ -466,23 +462,16 @@ public class AurPackageManager(string? configPath = null)
                     Status = PackageProgressStatus.Failed,
                     Message = $"Failed to install package: {ex.Message}"
                 });
-                failedPackages.Add(packageName);
                 continue;
             }
 
-            PackageProgress?.Invoke(this, new PackageProgressEventArgs
-            {
-                PackageName = packageName,
-                CurrentIndex = i + 1,
-                TotalCount = totalCount,
-                Status = PackageProgressStatus.Completed
-            });
-        }
-
-        if (failedPackages.Count > 0)
-        {
-            throw new InvalidOperationException(
-                $"Failed to install AUR package(s): {string.Join(", ", failedPackages)}");
+                PackageProgress?.Invoke(this, new PackageProgressEventArgs
+                {
+                    PackageName = packageName,
+                    CurrentIndex = i + 1,
+                    TotalCount = totalCount,
+                    Status = PackageProgressStatus.Completed
+                });
         }
     }
 
