@@ -325,8 +325,11 @@ public class FlatpakInstall(
 
             _versionHistoryButton.OnClicked += _versionHistoryHandler;
 
-            _remotesStringList = StringList.New(obj.Remotes.Select(r => r.Name + " : " + r.Scope).ToArray());
+            var remoteStrings = obj.Remotes.Select(r => r.Name + " : " + r.Scope).ToArray();
+            _remotesStringList = StringList.New(remoteStrings);
             _remoteDropDown.SetModel(_remotesStringList);
+            if (remoteStrings.Length > 0)
+                _selectedRemote = remoteStrings[0];
 
             _selectedPackage = obj;
 
@@ -801,5 +804,7 @@ public class FlatpakInstall(
         _cts.Dispose();
         _allPackages.Clear();
         _listStore?.RemoveAll();
+        _remoteListStore?.RemoveAll();
+        _selectedPackage = null!;
     }
 }
