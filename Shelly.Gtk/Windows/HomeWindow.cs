@@ -16,6 +16,8 @@ public class HomeWindow(
     IPrivilegedOperationService privilegedOperationService,
     IUnprivilegedOperationService unprivilegedOperationService,
     IConfigService configService,
+    ILockoutService lockoutService,
+    IGenericQuestionService genericQuestionService,
     MetaSearch metaSearch) : IShellyWindow
 {
     private Box _box = null!;
@@ -74,6 +76,9 @@ public class HomeWindow(
         var exportSyncButton = (Button)builder.GetObject("ExportSyncButton")!;
         exportSyncButton.OnClicked += (sender, args) => { _ = ExportSync(); };
 
+        var upgradeAllButton = (Button)builder.GetObject("UpgradeAllButton")!;
+        upgradeAllButton.OnClicked += (sender, args) => { _ = UpgradeAll(); };
+
         var config = configService.LoadConfig();
         var aurBox = (Box)builder.GetObject("AurBox")!;
         var flatpakBox = (Box)builder.GetObject("FlatpakBox")!;
@@ -92,6 +97,96 @@ public class HomeWindow(
         };
 
         return _box;
+    }
+
+    private async Task UpgradeAll()
+    {
+        try
+        {
+            var packagesNeedingUpdate = await privilegedOperationService.GetPackagesNeedingUpdateAsync();
+            if (packagesNeedingUpdate.Count == 0)
+            {
+                var toastArgs = new ToastMessageEventArgs("System is already up to date");
+                genericQuestionService.RaiseToastMessage(toastArgs);
+                return;
+            }
+
+            if (!configService.LoadConfig().NoConfirm)
+            {
+                var confirmArgs = new GenericQuestionEventArgs(
+                    "Upgrade All Packages?",
+                    BuildUpgradeConfirmationMessage(packagesNeedingUpdate),
+                    true
+                );
+
+                genericQuestionService.RaiseQuestion(confirmArgs);
+                if (!await confirmArgs.ResponseTask)
+                {
+                    return;
+                }
+            }
+
+            lockoutService.Show("Upgrading all packages...");
+
+            var aurUpdates = await privilegedOperationService.GetAurUpdatePackagesAsync();
+            if (aurUpdates.Count != 0)
+            {
+                var aurPackageNames = aurUpdates.Select(p => p.Name).ToList();
+                var packageBuilds = await privilegedOperationService.GetAurPackageBuild(aurPackageNames);
+
+                foreach (var pkgbuild in packageBuilds)
+                {
+                    if (pkgbuild.PkgBuild == null) continue;
+
+                    var buildArgs = new PackageBuildEventArgs($"Displaying Package Build {pkgbuild.Name}",
+                        pkgbuild.PkgBuild);
+                    genericQuestionService.RaisePackageBuild(buildArgs);
+
+                    if (!await buildArgs.ResponseTask)
+                    {
+                        return;
+                    }
+                }
+            }
+
+            await privilegedOperationService.UpgradeAllAsync();
+        }
+        catch (Exception e)
+        {
+            Console.WriteLine(e);
+        }
+        finally
+        {
+            lockoutService.Hide();
+        }
+    }
+
+    private static string BuildUpgradeConfirmationMessage(IEnumerable<AlpmPackageUpdateDto> packages)
+    {
+        var packageList = packages.ToList();
+        if (packageList.Count == 0)
+        {
+            return string.Empty;
+        }
+
+        const int maxPackageColumnWidth = 28;
+        var packageColumnWidth = Math.Min(
+            maxPackageColumnWidth,
+            packageList.Max(package => package.Name.Length));
+
+        return string.Join(Environment.NewLine, packageList.Select(package =>
+            $"{FormatPackageName(package.Name, packageColumnWidth)}  {package.CurrentVersion} -> {package.NewVersion}"));
+    }
+
+    private static string FormatPackageName(string packageName, int width)
+    {
+        if (packageName.Length > width)
+        {
+            var truncatedWidth = Math.Max(1, width - 1);
+            packageName = packageName[..truncatedWidth] + "…";
+        }
+
+        return packageName.PadRight(width);
     }
 
     private async Task ExportSync()
