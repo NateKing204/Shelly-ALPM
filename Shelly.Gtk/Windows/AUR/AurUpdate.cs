@@ -274,30 +274,29 @@ public class AurUpdate(
                     }
                 }
 
-                try
-                {
-                    //do work
-                    var result = await privilegedOperationService.UpdateAurPackagesAsync(selectedPackages);
-                    if (!result.Success)
-                    {
-                        Console.WriteLine($"Failed to remove packages: {result.Error}");
-                    }
+                var result = await privilegedOperationService.UpdateAurPackagesAsync(selectedPackages);
 
-                    await LoadDataAsync();
+                if (!result.Success)
+                {
+                    Console.WriteLine($"Failed to remove packages: {result.Error}");
                 }
-                finally
+                else
                 {
-                    lockoutService.Hide();
-
                     var args = new ToastMessageEventArgs(
                         $"Updated {selectedPackages.Count} Package(s)"
                     );
                     genericQuestionService.RaiseToastMessage(args);
                 }
+
+                await LoadDataAsync();
             }
             catch (Exception e)
             {
                 Console.WriteLine($"Failed to remove packages: {e.Message}");
+            }
+            finally
+            {
+                lockoutService.Hide();
             }
         }
     }
