@@ -494,6 +494,7 @@ public class HomeWindow(
             vbox.Append(date);
             vbox.Append(desc);
 
+            row.SetActivatable(false);
             row.SetChild(vbox);
             listBox.Append(row);
         }
