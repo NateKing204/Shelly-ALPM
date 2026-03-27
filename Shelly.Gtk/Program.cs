@@ -231,7 +231,8 @@ sealed class Program
 
             window.Show();
 
-            if (Assembly.GetExecutingAssembly().GetName().Version != configService.LoadConfig().CurrentVersion)
+            var assemblyVersion = Assembly.GetExecutingAssembly().GetName().Version?.ToString(3) ?? "0.0.0";
+            if (assemblyVersion != configService.LoadConfig().CurrentVersion)
             {
                 if (!configService.LoadConfig().NewInstall)
                 {
@@ -239,14 +240,14 @@ sealed class Program
                     ReleaseNotesDialog.ShowReleaseNotesDialog(mainOverlay, notes.Result);
                     
                     var config = configService.LoadConfig();
-                    config.CurrentVersion = Assembly.GetExecutingAssembly().GetName().Version ?? new Version(0,0,0);
+                    config.CurrentVersion = assemblyVersion;
                     configService.SaveConfig(config);
                 }
                 else
                 {
                     var config = configService.LoadConfig();
                     config.NewInstall = false;
-                    config.CurrentVersion = Assembly.GetExecutingAssembly().GetName().Version ?? new Version(0,0,0);
+                    config.CurrentVersion = assemblyVersion;
                     configService.SaveConfig(config);
                 }
             }
