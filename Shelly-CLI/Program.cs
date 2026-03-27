@@ -1,6 +1,7 @@
 using System.Reflection;
 using System.Text.Json;
 using Shelly_CLI.Commands.Aur;
+using Shelly_CLI.Commands.Config;
 using Shelly_CLI.Commands.Flatpak;
 using Shelly_CLI.Commands.Keyring;
 using Shelly_CLI.Commands.Standard;
@@ -33,17 +34,14 @@ public class Program
 
         if (!File.Exists(configPath))
         {
-            var configDir = Path.GetDirectoryName(configPath);
-            if (!string.IsNullOrEmpty(configDir))
-            {
-                Directory.CreateDirectory(configDir);
-            }
-
-            var defaultConfig = new ShellyConfig();
-            var options = new JsonSerializerOptions { WriteIndented = true };
-            var json = JsonSerializer.Serialize(defaultConfig, typeof(ShellyConfig), new ShellyCLIJsonContext(options));
-            File.WriteAllText(configPath, json);
+            ConfigManager.CreateConfig();
         }
+
+        // Fix config ownership if it was previously created by root
+        ConfigManager.FixConfigOwnershipIfNeeded();
+
+        // Migrate old UI settings if they exist
+        ConfigManager.MigrateFromUiConfig();
 
         // Check if running in UI mode (--ui-mode flag passed by Shelly-UI)
         var argsList = args.ToList();
@@ -340,6 +338,27 @@ public class Program
                 flatpak.AddCommand<FlatpakInstallFromRefFile>("install-ref-file").WithDescription("Installs flatpak app from ref file");
                 
                 flatpak.AddCommand<GetAppRemoteInfo>("app-remote-info").WithDescription("Get app remote info");
+            });
+
+            config.AddBranch("config", cfg =>
+            {
+                cfg.SetDescription("Manage shelly configuration");
+
+                cfg.AddCommand<ConfigGetCommand>("get")
+                    .WithDescription("Get a configuration value")
+                    .WithExample("config", "get", "DarkMode");
+
+                cfg.AddCommand<ConfigSetCommand>("set")
+                    .WithDescription("Set a configuration value")
+                    .WithExample("config", "set", "DarkMode", "true");
+
+                cfg.AddCommand<ConfigListCommand>("list")
+                    .WithDescription("List all configuration values")
+                    .WithExample("config", "list");
+
+                cfg.AddCommand<ConfigResetCommand>("reset")
+                    .WithDescription("Reset configuration to defaults")
+                    .WithExample("config", "reset");
             });
 
             config.AddBranch("utility", utility =>

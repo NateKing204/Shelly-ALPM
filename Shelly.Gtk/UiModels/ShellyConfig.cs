@@ -23,7 +23,7 @@ public class ShellyConfig
     
     public double WindowHeight { get; set; } = 600;
     
-    public DefaultViewEnum DefaultView  { get; set; }
+    public string DefaultView { get; set; } = nameof(DefaultViewEnum.HomeScreen);
     
     public bool UseKdeTheme { get; set; } = false;
     
@@ -37,7 +37,7 @@ public class ShellyConfig
     
     public bool NewInstall { get; set; } = true;
     
-    public Version CurrentVersion { get; set; } = new Version(0,0,0);
+    public string CurrentVersion { get; set; } = "0.0.0";
 
     public bool UseWeeklySchedule { get; set; } = false;
     
@@ -46,4 +46,8 @@ public class ShellyConfig
     public TimeOnly? Time { get; set; } = null;
     
     public bool WebViewEnabled { get; set; } = false;
+    
+    // Existing CLI settings (included for unified config compatibility)
+    public string FileSizeDisplay { get; set; } = "Bytes";
+    public string DefaultExecution { get; set; } = "UpgradeAll";
 }

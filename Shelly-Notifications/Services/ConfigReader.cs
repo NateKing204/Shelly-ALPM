@@ -6,18 +6,18 @@ namespace Shelly_Notifications.Services;
 public class ConfigReader
 {
     private static readonly string ConfigFolder = Path.Combine(
-        Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
-        "Shelly");
+        Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
+        "shelly");
 
-    private static readonly string ConfigPath = Path.Combine(ConfigFolder, "settings.json");
+    private static readonly string ConfigPath = Path.Combine(ConfigFolder, "config.json");
 
     private ShellyConfig? _config = null;
-    
+
     public void Refresh()
     {
         _config = null;
     }
-    
+
     public ShellyConfig LoadConfig()
     {
         try
@@ -28,9 +28,11 @@ public class ConfigReader
             }
 
             if (!File.Exists(ConfigPath)) return new ShellyConfig();
+
             var json = File.ReadAllText(ConfigPath);
             Console.WriteLine(ConfigPath);
-            _config = JsonSerializer.Deserialize(json, NotificationJsonContext.Default.ShellyConfig) ?? new ShellyConfig();
+            _config = JsonSerializer.Deserialize(json, NotificationJsonContext.Default.ShellyConfig) ??
+                      new ShellyConfig();
             return _config;
         }
         catch

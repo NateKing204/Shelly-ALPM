@@ -1,38 +1,40 @@
+using System.Diagnostics;
+using System.Reflection;
 using System.Text.Json;
 
 namespace Shelly_CLI.Configuration;
 
 public static class ConfigManager
 {
+    public static string GetConfigPath()
+    {
+        if (Environment.GetEnvironmentVariable("USER") == "root")
+        {
+            var username = Environment.GetEnvironmentVariable("SUDO_USER");
+            return Path.Combine("/home", username!, ".config", "shelly", "config.json");
+        }
+
+        return Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
+            "shelly", "config.json");
+    }
+
     public static ShellyConfig ReadConfig()
     {
-        var username = Environment.GetEnvironmentVariable("SUDO_USER");
-        var configPath = Path.Combine("/home", username, ".config", "shelly", "config.json");
-        Console.WriteLine(configPath);
+        var configPath = GetConfigPath();
+
         if (!File.Exists(configPath))
         {
-            CreateConfig();
+            return CreateConfig();
         }
 
         var json = File.ReadAllText(configPath);
-
-        return JsonSerializer.Deserialize<ShellyConfig>(json, ShellyCLIJsonContext.Default.ShellyConfig) ??
+        return JsonSerializer.Deserialize(json, ShellyCLIJsonContext.Default.ShellyConfig) ??
                new ShellyConfig();
     }
 
     public static ShellyConfig CreateConfig()
     {
-        string configPath;
-        if (Environment.GetEnvironmentVariable("USER") == "root")
-        {
-            var username = Environment.GetEnvironmentVariable("SUDO_USER");
-            configPath = Path.Combine("/home", username, ".config", "shelly", "config.json");
-        }
-        else
-        {
-            configPath = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
-                "shelly", "config.json");
-        }
+        var configPath = GetConfigPath();
 
         if (!File.Exists(configPath))
         {
@@ -43,11 +45,283 @@ public static class ConfigManager
             }
 
             var defaultConfig = new ShellyConfig();
-            var options = new JsonSerializerOptions { WriteIndented = true };
-            var json = JsonSerializer.Serialize(defaultConfig, typeof(ShellyConfig), new ShellyCLIJsonContext(options));
-            File.WriteAllText(configPath, json);
+            WriteConfig(defaultConfig, configPath);
+
+            if (IsRunningAsRoot() && !string.IsNullOrEmpty(configDir))
+            {
+                FixOwnership(configDir);
+            }
         }
 
-        return ReadConfig();
+        var json = File.ReadAllText(configPath);
+        return JsonSerializer.Deserialize(json, ShellyCLIJsonContext.Default.ShellyConfig) ??
+               new ShellyConfig();
+    }
+
+    public static void SaveConfig(ShellyConfig config)
+    {
+        var configPath = GetConfigPath();
+        var configDir = Path.GetDirectoryName(configPath);
+        if (!string.IsNullOrEmpty(configDir))
+        {
+            Directory.CreateDirectory(configDir);
+        }
+
+        WriteConfig(config, configPath);
+
+        if (IsRunningAsRoot() && !string.IsNullOrEmpty(configDir))
+        {
+            FixOwnership(configDir);
+        }
+    }
+
+    public static bool UpdateConfig(string key, string value)
+    {
+        var config = ReadConfig();
+        var property = typeof(ShellyConfig).GetProperty(key,
+            BindingFlags.Public | BindingFlags.Instance | BindingFlags.IgnoreCase);
+
+        if (property == null)
+            return false;
+
+        var targetType = Nullable.GetUnderlyingType(property.PropertyType) ?? property.PropertyType;
+
+        object? convertedValue;
+        try
+        {
+            if (targetType == typeof(bool))
+            {
+                convertedValue = bool.Parse(value);
+            }
+            else if (targetType == typeof(int))
+            {
+                convertedValue = int.Parse(value);
+            }
+            else if (targetType == typeof(double))
+            {
+                convertedValue = double.Parse(value);
+            }
+            else if (targetType == typeof(TimeOnly))
+            {
+                if (string.IsNullOrEmpty(value) || value.Equals("null", StringComparison.OrdinalIgnoreCase))
+                    convertedValue = null;
+                else
+                    convertedValue = TimeOnly.Parse(value);
+            }
+            else if (targetType == typeof(List<DayOfWeek>))
+            {
+                if (string.IsNullOrEmpty(value) || value == "[]")
+                {
+                    convertedValue = new List<DayOfWeek>();
+                }
+                else
+                {
+                    convertedValue = value.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
+                        .Select(d => Enum.Parse<DayOfWeek>(d, true))
+                        .ToList();
+                }
+            }
+            else
+            {
+                convertedValue = value;
+            }
+        }
+        catch
+        {
+            return false;
+        }
+
+        property.SetValue(config, convertedValue);
+        SaveConfig(config);
+        return true;
+    }
+
+    public static string? GetConfigValue(string key)
+    {
+        var config = ReadConfig();
+        var property = typeof(ShellyConfig).GetProperty(key,
+            BindingFlags.Public | BindingFlags.Instance | BindingFlags.IgnoreCase);
+
+        if (property == null)
+            return null;
+
+        var value = property.GetValue(config);
+        if (value is List<DayOfWeek> days)
+            return string.Join(",", days);
+
+        return value?.ToString();
+    }
+
+    public static Dictionary<string, string?> GetAllConfigValues()
+    {
+        var config = ReadConfig();
+        var result = new Dictionary<string, string?>();
+
+        foreach (var property in typeof(ShellyConfig).GetProperties(BindingFlags.Public | BindingFlags.Instance))
+        {
+            var value = property.GetValue(config);
+            if (value is List<DayOfWeek> days)
+                result[property.Name] = string.Join(",", days);
+            else
+                result[property.Name] = value?.ToString();
+        }
+
+        return result;
+    }
+
+    public static void MigrateFromUiConfig()
+    {
+        var oldConfigFolder = Path.Combine(
+            Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "Shelly");
+        var oldConfigPath = Path.Combine(oldConfigFolder, "settings.json");
+
+        if (!File.Exists(oldConfigPath))
+            return;
+
+        try
+        {
+            var oldJson = File.ReadAllText(oldConfigPath);
+            using var doc = JsonDocument.Parse(oldJson);
+            var root = doc.RootElement;
+
+            var config = ReadConfig();
+
+            if (root.TryGetProperty("AccentColor", out var accentColor) && accentColor.ValueKind == JsonValueKind.String)
+                config.AccentColor = accentColor.GetString();
+            if (root.TryGetProperty("Culture", out var culture) && culture.ValueKind == JsonValueKind.String)
+                config.Culture = culture.GetString();
+            if (root.TryGetProperty("DarkMode", out var darkMode))
+                config.DarkMode = darkMode.GetBoolean();
+            if (root.TryGetProperty("AurEnabled", out var aurEnabled))
+                config.AurEnabled = aurEnabled.GetBoolean();
+            if (root.TryGetProperty("AurWarningConfirmed", out var aurWarning))
+                config.AurWarningConfirmed = aurWarning.GetBoolean();
+            if (root.TryGetProperty("FlatPackEnabled", out var flatpack))
+                config.FlatPackEnabled = flatpack.GetBoolean();
+            if (root.TryGetProperty("ConsoleEnabled", out var console))
+                config.ConsoleEnabled = console.GetBoolean();
+            if (root.TryGetProperty("WindowWidth", out var width))
+                config.WindowWidth = width.GetDouble();
+            if (root.TryGetProperty("WindowHeight", out var height))
+                config.WindowHeight = height.GetDouble();
+            if (root.TryGetProperty("DefaultView", out var defaultView))
+                config.DefaultView = defaultView.ToString();
+            if (root.TryGetProperty("UseKdeTheme", out var kde))
+                config.UseKdeTheme = kde.GetBoolean();
+            if (root.TryGetProperty("UseHorizontalMenu", out var horizontal))
+                config.UseHorizontalMenu = horizontal.GetBoolean();
+            if (root.TryGetProperty("TrayEnabled", out var tray))
+                config.TrayEnabled = tray.GetBoolean();
+            if (root.TryGetProperty("TrayCheckIntervalHours", out var interval))
+                config.TrayCheckIntervalHours = interval.GetInt32();
+            if (root.TryGetProperty("NoConfirm", out var noConfirm))
+                config.NoConfirm = noConfirm.GetBoolean();
+            if (root.TryGetProperty("NewInstall", out var newInstall))
+                config.NewInstall = newInstall.GetBoolean();
+            if (root.TryGetProperty("CurrentVersion", out var version) && version.ValueKind == JsonValueKind.String)
+                config.CurrentVersion = version.GetString() ?? "0.0.0";
+            if (root.TryGetProperty("UseWeeklySchedule", out var weekly))
+                config.UseWeeklySchedule = weekly.GetBoolean();
+            if (root.TryGetProperty("WebViewEnabled", out var webView))
+                config.WebViewEnabled = webView.GetBoolean();
+            if (root.TryGetProperty("DaysOfWeek", out var days) && days.ValueKind == JsonValueKind.Array)
+            {
+                config.DaysOfWeek = [];
+                foreach (var day in days.EnumerateArray())
+                {
+                    if (Enum.TryParse<DayOfWeek>(day.GetString(), true, out var d))
+                        config.DaysOfWeek.Add(d);
+                    else if (day.ValueKind == JsonValueKind.Number)
+                        config.DaysOfWeek.Add((DayOfWeek)day.GetInt32());
+                }
+            }
+            if (root.TryGetProperty("Time", out var time) && time.ValueKind == JsonValueKind.String)
+            {
+                if (TimeOnly.TryParse(time.GetString(), out var t))
+                    config.Time = t;
+            }
+
+            SaveConfig(config);
+
+            // Rename old config to indicate migration
+            File.Move(oldConfigPath, oldConfigPath + ".migrated", true);
+        }
+        catch (Exception ex)
+        {
+            Console.Error.WriteLine($"Warning: Failed to migrate UI settings: {ex.Message}");
+        }
+    }
+
+    public static bool IsOwnedByRoot(string path)
+    {
+        if (!File.Exists(path)) return false;
+
+        try
+        {
+            var process = new Process
+            {
+                StartInfo = new ProcessStartInfo
+                {
+                    FileName = "stat",
+                    Arguments = $"-c %u \"{path}\"",
+                    RedirectStandardOutput = true,
+                    UseShellExecute = false,
+                    CreateNoWindow = true
+                }
+            };
+            process.Start();
+            var output = process.StandardOutput.ReadToEnd().Trim();
+            process.WaitForExit(3000);
+            return output == "0";
+        }
+        catch
+        {
+            return false;
+        }
+    }
+
+    public static void FixConfigOwnershipIfNeeded()
+    {
+        var configPath = GetConfigPath();
+        var configDir = Path.GetDirectoryName(configPath);
+
+        if (string.IsNullOrEmpty(configDir)) return;
+
+        if (IsRunningAsRoot() && (IsOwnedByRoot(configPath) || IsOwnedByRoot(configDir)))
+        {
+            FixOwnership(configDir);
+        }
+    }
+
+    private static bool IsRunningAsRoot()
+        => Environment.GetEnvironmentVariable("USER") == "root";
+
+    private static string? GetRealUser()
+        => Environment.GetEnvironmentVariable("SUDO_USER");
+
+    private static void FixOwnership(string path)
+    {
+        var user = GetRealUser();
+        if (string.IsNullOrEmpty(user)) return;
+
+        var process = new Process
+        {
+            StartInfo = new ProcessStartInfo
+            {
+                FileName = "chown",
+                Arguments = $"-R {user}:{user} \"{path}\"",
+                UseShellExecute = false,
+                CreateNoWindow = true
+            }
+        };
+        process.Start();
+        process.WaitForExit(5000);
+    }
+
+    private static void WriteConfig(ShellyConfig config, string configPath)
+    {
+        var options = new JsonSerializerOptions { WriteIndented = true };
+        var json = JsonSerializer.Serialize(config, typeof(ShellyConfig), new ShellyCLIJsonContext(options));
+        File.WriteAllText(configPath, json);
     }
 }
