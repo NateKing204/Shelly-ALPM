@@ -9,13 +9,13 @@ using Spectre.Console.Cli;
 
 namespace Shelly_CLI.Commands.Standard;
 
-public class UpgradeCommand : Command<UpgradeSettings>
+public class UpgradeCommand : AsyncCommand<UpgradeSettings>
 {
-    public override int Execute([NotNull] CommandContext context, [NotNull] UpgradeSettings settings)
+    public override async Task<int> ExecuteAsync([NotNull] CommandContext context, [NotNull] UpgradeSettings settings)
     {
         if (Program.IsUiMode)
         {
-            return HandleUiModeUpgrade(context, settings);
+            return await HandleUiModeUpgrade(context, settings);
         }
 
         RootElevator.EnsureRootExectuion();
@@ -46,8 +46,9 @@ public class UpgradeCommand : Command<UpgradeSettings>
         };
 
         AnsiConsole.MarkupLine("[yellow]Checking for system updates...[/]");
-        AnsiConsole.MarkupLine("[yellow] Initializing and syncing repositories...[/]");
-        manager.IntializeWithSync();
+        AnsiConsole.MarkupLine("[yellow]Initializing and syncing repositories...[/]");
+        manager.Initialize(true);
+        manager.Sync();
         var packagesNeedingUpdate = manager.GetPackagesNeedingUpdate();
         if (packagesNeedingUpdate.Count == 0)
         {
@@ -82,8 +83,8 @@ public class UpgradeCommand : Command<UpgradeSettings>
 
         AnsiConsole.MarkupLine("[yellow] Starting System Upgrade...[/]");
         var progressTable = new Table().AddColumns("Package", "Progress", "Status", "Stage");
-        AnsiConsole.Live(progressTable).AutoClear(false)
-            .Start(ctx =>
+        await AnsiConsole.Live(progressTable).AutoClear(false)
+            .StartAsync(async ctx =>
             {
                 var rowIndex = new Dictionary<string, int>();
 
@@ -116,7 +117,7 @@ public class UpgradeCommand : Command<UpgradeSettings>
                         ctx.Refresh();
                     }
                 };
-                manager.SyncSystemUpdate();
+                await manager.SyncSystemUpdate();
             });
 
         AnsiConsole.MarkupLine("[green]System upgraded successfully![/]");
@@ -140,7 +141,7 @@ public class UpgradeCommand : Command<UpgradeSettings>
         return 0;
     }
 
-    private static int HandleUiModeUpgrade(CommandContext context, UpgradeSettings settings)
+    private static async Task<int> HandleUiModeUpgrade(CommandContext context, UpgradeSettings settings)
     {
         Console.Error.WriteLine("Performing full system upgrade...");
 
@@ -195,7 +196,7 @@ public class UpgradeCommand : Command<UpgradeSettings>
             }
         };
 
-        manager.SyncSystemUpdate();
+        await manager.SyncSystemUpdate();
         manager.Dispose();
         if (settings.Aur || settings.All)
         {

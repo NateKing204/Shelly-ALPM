@@ -28,7 +28,7 @@ public class CheckPackageUpdatesNonRootCommand : AsyncCommand<CheckPackageUpdate
         AnsiConsole.WriteLine(dbPath);
         if (settings.JsonOutput)
         {
-            alpmManager.Initialize(false, true, dbPath);
+            alpmManager.Initialize(false, useTempPath: true, tempPath: dbPath);
             alpmManager.Sync();
             alpmPackages = alpmManager.GetPackagesNeedingUpdate();
             alpmManager.Dispose();
@@ -73,7 +73,7 @@ public class CheckPackageUpdatesNonRootCommand : AsyncCommand<CheckPackageUpdate
         AnsiConsole.Status().Spinner(Spinner.Known.BouncingBall).Start("Initializing and syncing ALPM updates",
             ctx =>
             {
-                alpmManager.Initialize(false, true, dbPath);
+                alpmManager.Initialize(false, useTempPath: true, tempPath: dbPath);
                 alpmManager.Sync();
                 alpmPackages = alpmManager.GetPackagesNeedingUpdate();
                 alpmManager.Dispose();
@@ -151,7 +151,7 @@ public class CheckPackageUpdatesNonRootCommand : AsyncCommand<CheckPackageUpdate
         
         if (settings.JsonOutput)
         {
-            alpmManager.Initialize(false, true, dbPath);
+            alpmManager.Initialize(false, useTempPath: true, tempPath: dbPath);
             alpmManager.Sync();
             alpmPackages = alpmManager.GetPackagesNeedingUpdate();
             alpmManager.Dispose();
@@ -193,7 +193,7 @@ public class CheckPackageUpdatesNonRootCommand : AsyncCommand<CheckPackageUpdate
         }
 
         Console.Error.WriteLine("Initializing and syncing ALPM updates");
-        alpmManager.Initialize(false, true, dbPath);
+        alpmManager.Initialize(false, useTempPath: true, tempPath: dbPath);
         alpmManager.Sync();
         alpmPackages = alpmManager.GetPackagesNeedingUpdate();
         alpmManager.Dispose();

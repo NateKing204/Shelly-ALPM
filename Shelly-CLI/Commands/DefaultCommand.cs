@@ -19,7 +19,6 @@ public class DefaultCommand : AsyncCommand<DefaultCommandSettings>
         var username = Environment.GetEnvironmentVariable("SUDO_USER") ?? Environment.UserName;
         ;
         var configPath = Path.Combine("/home", username, ".config", "shelly", "config.json");
-        Console.WriteLine(configPath);
         if (!File.Exists(configPath))
         {
             return 1;
@@ -70,13 +69,13 @@ public class DefaultCommand : AsyncCommand<DefaultCommandSettings>
                 config.DefaultExecution);
         return parsed switch
         {
-            Shelly_CLI.Configuration.DefaultCommand.UpgradeStandard => new UpgradeCommand().Execute(context,
-                new UpgradeSettings()),
+            Shelly_CLI.Configuration.DefaultCommand.UpgradeStandard => new UpgradeCommand().ExecuteAsync(context,
+                new UpgradeSettings()).Result,
             Shelly_CLI.Configuration.DefaultCommand.UpgradeFlatpak => new FlatpakUpgrade().Execute(context),
             Shelly_CLI.Configuration.DefaultCommand.UpgradeAur => await new AurUpgradeCommand().ExecuteAsync(context,
                 new AurUpgradeSettings()),
-            Shelly_CLI.Configuration.DefaultCommand.UpgradeAll => new UpgradeCommand().Execute(context,
-                new UpgradeSettings { All = true }),
+            Shelly_CLI.Configuration.DefaultCommand.UpgradeAll => new UpgradeCommand().ExecuteAsync(context,
+                new UpgradeSettings { All = true }).Result,
             Shelly_CLI.Configuration.DefaultCommand.Sync => new SyncCommand().Execute(context, new SyncSettings()),
             Shelly_CLI.Configuration.DefaultCommand.SyncForce => new SyncCommand().Execute(context,
                 new SyncSettings { Force = true }),

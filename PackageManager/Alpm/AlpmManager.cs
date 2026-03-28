@@ -8,6 +8,7 @@ using System.Net.Http;
 using System.Net.NetworkInformation;
 using System.Runtime.InteropServices;
 using System.Text.RegularExpressions;
+using System.Threading.Tasks;
 using PackageManager.Alpm.Questions;
 using PackageManager.Utilities;
 using static PackageManager.Alpm.AlpmReference;
@@ -31,6 +32,8 @@ public class AlpmManager(string configPath = "/etc/pacman.conf") : IDisposable, 
     private AlpmEventCallback _eventCallback;
     private AlpmQuestionCallback _questionCallback;
     private AlpmProgressCallback? _progressCallback;
+    private int _parallelDownloads = 1;
+    private bool _isPackageDownload;
 
     public event EventHandler<AlpmProgressEventArgs>? Progress;
     public event EventHandler<AlpmPackageOperationEventArgs>? PackageOperation;
@@ -40,11 +43,13 @@ public class AlpmManager(string configPath = "/etc/pacman.conf") : IDisposable, 
     public void IntializeWithSync()
     {
         Initialize(true);
-        Sync();
+        Sync(true);
     }
 
-    public void Initialize(bool root = false, bool useTempPath = false, string tempPath = "")
+    public void Initialize(bool root = false, int parallelDownloads = 10, bool useTempPath = false,
+        string tempPath = "")
     {
+        _parallelDownloads = parallelDownloads;
         if (_handle != IntPtr.Zero)
         {
             Release(_handle);
@@ -472,6 +477,11 @@ public class AlpmManager(string configPath = "/etc/pacman.conf") : IDisposable, 
             var directory = Path.GetDirectoryName(localpath);
             if (directory != null) Directory.CreateDirectory(directory);
 
+            if (_isPackageDownload && File.Exists(localpath) && force == 0)
+            {
+                return 0;
+            }
+
             // URL should already be absolute from fetchcb
             return PerformDownload(url, localpath);
         }
@@ -729,6 +739,7 @@ public class AlpmManager(string configPath = "/etc/pacman.conf") : IDisposable, 
 
     public void Sync(bool force = false)
     {
+        _isPackageDownload = false;
         if (_handle == IntPtr.Zero) Initialize();
         var syncDbsPtr = GetSyncDbs(_handle);
         if (syncDbsPtr != IntPtr.Zero)
@@ -1196,13 +1207,39 @@ public class AlpmManager(string configPath = "/etc/pacman.conf") : IDisposable, 
         }
     }
 
-    public void SyncSystemUpdate(AlpmTransFlag flags = AlpmTransFlag.None)
+    public async Task SyncSystemUpdate(AlpmTransFlag flags = AlpmTransFlag.None)
     {
         if (_handle == IntPtr.Zero) Initialize();
         var syncDbsPtr = GetSyncDbs(_handle);
         Update(_handle, syncDbsPtr, true);
         try
         {
+            _isPackageDownload = true;
+            var updates = GetPackagesNeedingUpdate();
+            var downloadTasks = updates.Select(pkg => Task.Run(() =>
+            {
+                var url = BuildPackageUrl(pkg);
+                var fileName = url.Split('/').Last();
+                var localPath = Path.Combine(_config.CacheDir, fileName);
+                if (!File.Exists(localPath))
+                {
+                    Progress?.Invoke(this, new AlpmProgressEventArgs(
+                        AlpmProgressType.PackageDownload,
+                        fileName,
+                        0, 0, 0
+                    ));
+                    PerformDownload(url, localPath);
+                }
+                else
+                {
+                    Progress?.Invoke(this, new AlpmProgressEventArgs(
+                        AlpmProgressType.PackageDownload,
+                        fileName,
+                        100, 0, 0
+                    ));
+                }
+            }));
+            await Task.WhenAll(downloadTasks); 
             if (TransInit(_handle, flags) != 0)
             {
                 Console.Error.WriteLine(
@@ -1938,5 +1975,45 @@ public class AlpmManager(string configPath = "/etc/pacman.conf") : IDisposable, 
     {
         var config = PacmanConfParser.Parse(configPath);
         return config.Repos.Select(r => r.Name).ToList();
+    }
+
+    private string BuildPackageUrl(AlpmPackageUpdateDto pkg)
+    {
+        // Find the sync DB that contains this package
+        var syncDbsPtr = GetSyncDbs(_handle);
+        var currentPtr = syncDbsPtr;
+
+        while (currentPtr != IntPtr.Zero)
+        {
+            var node = Marshal.PtrToStructure<AlpmList>(currentPtr);
+            if (node.Data != IntPtr.Zero)
+            {
+                var pkgPtr = DbGetPkg(node.Data, pkg.Name);
+                if (pkgPtr != IntPtr.Zero)
+                {
+                    // Get the filename from the package
+                    var fileNamePtr = AlpmReference.GetPkgFileName(pkgPtr);
+                    var fileName = Marshal.PtrToStringUTF8(fileNamePtr)
+                                   ?? throw new Exception($"Could not get filename for package {pkg.Name}");
+
+                    // Get the first server URL from this database
+                    var serversPtr = AlpmReference.DbGetServers(node.Data);
+                    if (serversPtr != IntPtr.Zero)
+                    {
+                        var serverNode = Marshal.PtrToStructure<AlpmList>(serversPtr);
+                        if (serverNode.Data != IntPtr.Zero)
+                        {
+                            var serverUrl = Marshal.PtrToStringUTF8(serverNode.Data)
+                                            ?? throw new Exception($"Could not get server URL for package {pkg.Name}");
+                            return $"{serverUrl.TrimEnd('/')}/{fileName}";
+                        }
+                    }
+                }
+            }
+
+            currentPtr = node.Next;
+        }
+
+        throw new Exception($"Package '{pkg.Name}' not found in any sync database");
     }
 }

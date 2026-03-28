@@ -2,6 +2,7 @@ using System.Diagnostics.CodeAnalysis;
 using System.Linq;
 using System.Text.Json;
 using PackageManager.Alpm;
+using Shelly_CLI.Configuration;
 using Shelly_CLI.Utility;
 using Spectre.Console;
 using Spectre.Console.Cli;
@@ -27,13 +28,14 @@ public class ListUpdatesCommand : Command<DefaultSettings>
                 .Spinner(Spinner.Known.Dots)
                 .Start("Initializing and syncing ALPM...", ctx =>
                 {
-                    manager.Initialize(false, true, dbPath);
+                    manager.Initialize(false, int.Parse(ConfigManager.GetConfigValue("ParallelDownloadCount")!), true,
+                        dbPath);
                     manager.Sync();
                 });
         }
         else
         {
-            manager.Initialize(false, true, dbPath);
+            manager.Initialize(false, int.Parse(ConfigManager.GetConfigValue("ParallelDownloadCount")!), true, dbPath);
             manager.Sync();
         }
 
@@ -99,7 +101,7 @@ public class ListUpdatesCommand : Command<DefaultSettings>
         var username = Environment.GetEnvironmentVariable("USER");
         var dbPath = Path.Combine("/home", username, ".cache", "Shelly", "db");
         Directory.CreateDirectory(dbPath);
-        manager.Initialize(false, true, dbPath);
+        manager.Initialize(false, int.Parse(ConfigManager.GetConfigValue("ParallelDownloadCount")!),true, dbPath);
         manager.Sync();
         var updates = manager.GetPackagesNeedingUpdate();
 

@@ -6,6 +6,8 @@ public class ShellyConfig
     public string FileSizeDisplay { get; set; } = nameof(SizeDisplay.Bytes);
     public string DefaultExecution { get; set; } = nameof(DefaultCommand.UpgradeAll);
 
+    public int ParallelDownloadCount { get; set; } = 10;
+
     // Migrated from UI
     public string? AccentColor { get; set; }
     public string? Culture { get; set; }

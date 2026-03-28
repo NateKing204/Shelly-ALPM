@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Threading.Tasks;
 
 namespace PackageManager.Alpm;
 
@@ -11,7 +12,7 @@ public interface IAlpmManager
     event EventHandler<AlpmReplacesEventArgs>? Replaces;
 
     void IntializeWithSync();
-    void Initialize(bool root = false, bool useTempPath = false, string tempPath = "");
+    void Initialize(bool root = false, int parallelDownloads=1, bool useTempPath = false, string tempPath = "");
     void Sync(bool force = false);
     List<AlpmPackageDto> GetInstalledPackages();
     List<AlpmPackageDto> GetAvailablePackages();
@@ -28,7 +29,7 @@ public interface IAlpmManager
     void UpdatePackages(List<string> packageNames,
         AlpmTransFlag flags = AlpmTransFlag.None);
 
-    void SyncSystemUpdate(AlpmTransFlag flags = AlpmTransFlag.None);
+    Task SyncSystemUpdate(AlpmTransFlag flags = AlpmTransFlag.None);
 
     void InstallLocalPackage(string path, AlpmTransFlag flags = AlpmTransFlag.None);
 

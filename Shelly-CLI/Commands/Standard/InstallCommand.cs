@@ -146,15 +146,15 @@ public class InstallCommand : Command<InstallPackageSettings>
         if (settings.Upgrade)
         {
             var command = new UpgradeCommand();
-            command.Execute(context, new UpgradeSettings()
+            command.ExecuteAsync(context, new UpgradeSettings()
             {
                 JsonOutput = true,
-            });
+            }).Wait();
         }
 
         var manager = new AlpmManager();
         manager.Question += (sender, args) => { QuestionHandler.HandleQuestion(args, true, settings.NoConfirm); };
-        Console.Error.WriteLine("Initializing and syncing ALPM...");
+        Console.Error.WriteLine("Initializing ALPM...");
         manager.Initialize(true);
 
         if (settings.BuildDepsOn)

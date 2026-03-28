@@ -82,7 +82,9 @@ public static class ConfigManager
             BindingFlags.Public | BindingFlags.Instance | BindingFlags.IgnoreCase);
 
         if (property == null)
+        {
             return false;
+        }
 
         var targetType = Nullable.GetUnderlyingType(property.PropertyType) ?? property.PropertyType;
 
@@ -104,9 +106,13 @@ public static class ConfigManager
             else if (targetType == typeof(TimeOnly))
             {
                 if (string.IsNullOrEmpty(value) || value.Equals("null", StringComparison.OrdinalIgnoreCase))
+                {
                     convertedValue = null;
+                }
                 else
+                {
                     convertedValue = TimeOnly.Parse(value);
+                }
             }
             else if (targetType == typeof(List<DayOfWeek>))
             {
@@ -116,7 +122,8 @@ public static class ConfigManager
                 }
                 else
                 {
-                    convertedValue = value.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
+                    convertedValue = value.Split(',',
+                            StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
                         .Select(d => Enum.Parse<DayOfWeek>(d, true))
                         .ToList();
                 }
@@ -143,11 +150,15 @@ public static class ConfigManager
             BindingFlags.Public | BindingFlags.Instance | BindingFlags.IgnoreCase);
 
         if (property == null)
+        {
             return null;
+        }
 
         var value = property.GetValue(config);
         if (value is List<DayOfWeek> days)
+        {
             return string.Join(",", days);
+        }
 
         return value?.ToString();
     }
@@ -161,9 +172,13 @@ public static class ConfigManager
         {
             var value = property.GetValue(config);
             if (value is List<DayOfWeek> days)
+            {
                 result[property.Name] = string.Join(",", days);
+            }
             else
+            {
                 result[property.Name] = value?.ToString();
+            }
         }
 
         return result;
@@ -176,7 +191,9 @@ public static class ConfigManager
         var oldConfigPath = Path.Combine(oldConfigFolder, "settings.json");
 
         if (!File.Exists(oldConfigPath))
+        {
             return;
+        }
 
         try
         {
@@ -186,55 +203,122 @@ public static class ConfigManager
 
             var config = ReadConfig();
 
-            if (root.TryGetProperty("AccentColor", out var accentColor) && accentColor.ValueKind == JsonValueKind.String)
+            if (root.TryGetProperty("AccentColor", out var accentColor) &&
+                accentColor.ValueKind == JsonValueKind.String)
+            {
                 config.AccentColor = accentColor.GetString();
+            }
+
             if (root.TryGetProperty("Culture", out var culture) && culture.ValueKind == JsonValueKind.String)
+            {
                 config.Culture = culture.GetString();
+            }
+
             if (root.TryGetProperty("DarkMode", out var darkMode))
+            {
                 config.DarkMode = darkMode.GetBoolean();
+            }
+
             if (root.TryGetProperty("AurEnabled", out var aurEnabled))
+            {
                 config.AurEnabled = aurEnabled.GetBoolean();
+            }
+
             if (root.TryGetProperty("AurWarningConfirmed", out var aurWarning))
+            {
                 config.AurWarningConfirmed = aurWarning.GetBoolean();
+            }
+
             if (root.TryGetProperty("FlatPackEnabled", out var flatpack))
+            {
                 config.FlatPackEnabled = flatpack.GetBoolean();
+            }
+
             if (root.TryGetProperty("ConsoleEnabled", out var console))
+            {
                 config.ConsoleEnabled = console.GetBoolean();
+            }
+
             if (root.TryGetProperty("WindowWidth", out var width))
+            {
                 config.WindowWidth = width.GetDouble();
+            }
+
             if (root.TryGetProperty("WindowHeight", out var height))
+            {
                 config.WindowHeight = height.GetDouble();
+            }
+
             if (root.TryGetProperty("DefaultView", out var defaultView))
+            {
                 config.DefaultView = defaultView.ToString();
+            }
+
             if (root.TryGetProperty("UseKdeTheme", out var kde))
+            {
                 config.UseKdeTheme = kde.GetBoolean();
+            }
+
             if (root.TryGetProperty("UseHorizontalMenu", out var horizontal))
+            {
                 config.UseHorizontalMenu = horizontal.GetBoolean();
+            }
+
             if (root.TryGetProperty("TrayEnabled", out var tray))
+            {
                 config.TrayEnabled = tray.GetBoolean();
+            }
+
             if (root.TryGetProperty("TrayCheckIntervalHours", out var interval))
+            {
                 config.TrayCheckIntervalHours = interval.GetInt32();
+            }
+
             if (root.TryGetProperty("NoConfirm", out var noConfirm))
+            {
                 config.NoConfirm = noConfirm.GetBoolean();
+            }
+
             if (root.TryGetProperty("NewInstall", out var newInstall))
+            {
                 config.NewInstall = newInstall.GetBoolean();
+            }
+
             if (root.TryGetProperty("CurrentVersion", out var version) && version.ValueKind == JsonValueKind.String)
+            {
                 config.CurrentVersion = version.GetString() ?? "0.0.0";
+            }
+
             if (root.TryGetProperty("UseWeeklySchedule", out var weekly))
+            {
                 config.UseWeeklySchedule = weekly.GetBoolean();
+            }
+
             if (root.TryGetProperty("WebViewEnabled", out var webView))
+            {
                 config.WebViewEnabled = webView.GetBoolean();
+            }
+
             if (root.TryGetProperty("DaysOfWeek", out var days) && days.ValueKind == JsonValueKind.Array)
             {
                 config.DaysOfWeek = [];
                 foreach (var day in days.EnumerateArray())
                 {
-                    if (Enum.TryParse<DayOfWeek>(day.GetString(), true, out var d))
-                        config.DaysOfWeek.Add(d);
-                    else if (day.ValueKind == JsonValueKind.Number)
-                        config.DaysOfWeek.Add((DayOfWeek)day.GetInt32());
+                    switch (day.ValueKind)
+                    {
+                        case JsonValueKind.String when
+                            Enum.TryParse<DayOfWeek>(day.GetString(), true, out var d):
+                            config.DaysOfWeek.Add(d);
+                            break;
+                        case JsonValueKind.Number:
+                            config.DaysOfWeek.Add((DayOfWeek)day.GetInt32());
+                            break;
+                        default:
+                            throw new ArgumentOutOfRangeException();
+                    }
                 }
             }
+
             if (root.TryGetProperty("Time", out var time) && time.ValueKind == JsonValueKind.String)
             {
                 if (TimeOnly.TryParse(time.GetString(), out var t))
