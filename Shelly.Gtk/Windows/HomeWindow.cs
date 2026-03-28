@@ -1,6 +1,4 @@
 using System.Text;
-using System.Text.RegularExpressions;
-using System.Xml.Linq;
 using Gtk;
 using Shelly.Gtk.Helpers;
 using Shelly.Gtk.Services;
@@ -24,7 +22,8 @@ public class HomeWindow(
 {
     private Box _box = null!;
     private readonly CancellationTokenSource _cts = new();
-    private ListBox? _listBox;
+    private Revealer? _updatesRevealer;
+    private ListBox? _updatesListBox;
     private Label? _totalAurLabel;
     private Label? _percentAurLabel;
     private Label? _totalPackageLabel;
@@ -35,11 +34,21 @@ public class HomeWindow(
     public Widget CreateWindow()
     {
         var builder = Builder.NewFromString(ResourceHelper.LoadUiFile("UiFiles/HomeWindow.ui"), -1);
+        var overlay = (Overlay)builder.GetObject("HomeWindowOverlay")!;
         _box = (Box)builder.GetObject("HomeWindow")!;
 
-        var listBox = (ListBox)builder.GetObject("NewsListBox")!;
-        _listBox = listBox;
-        listBox.OnRealize += (sender, args) => { _ = LoadFeedAsync(listBox, _cts.Token); };
+        _updatesRevealer = (Revealer)builder.GetObject("UpdatesRevealer")!;
+        _updatesListBox = (ListBox)builder.GetObject("UpdatesListBox")!;
+        var showUpdatesButton = (ToggleButton)builder.GetObject("ShowUpdatesButton")!;
+
+        showUpdatesButton.OnToggled += (sender, args) =>
+        {
+            _updatesRevealer.RevealChild = showUpdatesButton.Active;
+            if (showUpdatesButton.Active && _updatesListBox is not null)
+            {
+                _ = LoadUpdatesPanel(_updatesListBox, _cts.Token);
+            }
+        };
 
         var homeSearchEntry = (SearchEntry)builder.GetObject("HomeSearchEntry")!;
         var metaSearchContainer = (Box)builder.GetObject("MetaSearchContainer")!;
@@ -107,7 +116,7 @@ public class HomeWindow(
             });
         };
 
-        return _box;
+        return overlay;
     }
 
     private async Task UpgradeAll()
@@ -198,8 +207,8 @@ public class HomeWindow(
             tasks.Add(LoadTotalFlatpak(_totalFlatpakLabel, _cts.Token));
         if (_flatpakPercentLabel is not null)
             tasks.Add(LoadPercentFlatpak(_flatpakPercentLabel, _cts.Token));
-        if (_listBox is not null)
-            tasks.Add(LoadFeedAsync(_listBox, _cts.Token));
+        if (_updatesListBox is not null)
+            tasks.Add(LoadUpdatesPanel(_updatesListBox, _cts.Token));
 
         await Task.WhenAll(tasks);
     }
@@ -440,88 +449,84 @@ public class HomeWindow(
     }
 
 
-    private static async Task LoadFeedAsync(ListBox listBox, CancellationToken ct)
+    private async Task LoadUpdatesPanel(ListBox listBox, CancellationToken ct)
     {
-        var feedItems = new List<RssModel>();
-
-        // Fetch from network
         try
         {
-            var feed = await GetRssFeedAsync("https://archlinux.org/feeds/news/", ct);
+            var updates = await unprivilegedOperationService.CheckForApplicationUpdates();
             ct.ThrowIfCancellationRequested();
-            feedItems.AddRange(feed);
 
-            // Marshal back to GTK main thread to update UI
             GLib.Functions.IdleAdd(0, () =>
             {
-                PopulateListBox(listBox, feedItems);
-                return false; // run once
-            });
+                // Clear existing rows
+                while (listBox.GetFirstChild() is { } child)
+                    listBox.Remove(child);
 
-            // Cache the result
-            var cachedFeed = new CachedRssModel
-            {
-                TimeCached = DateTime.Now,
-                Rss = feedItems
-            };
+                foreach (var pkg in updates.Packages)
+                {
+                    var row = new ListBoxRow();
+                    var label = Label.New($"{pkg.Name}: {pkg.OldVersion} → {pkg.Version}");
+                    label.Halign = Align.Start;
+                    label.Wrap = true;
+                    label.MarginStart = 8;
+                    label.MarginEnd = 8;
+                    label.MarginTop = 4;
+                    label.MarginBottom = 4;
+                    row.SetActivatable(false);
+                    row.SetChild(label);
+                    listBox.Append(row);
+                }
+
+                foreach (var pkg in updates.Aur)
+                {
+                    var row = new ListBoxRow();
+                    var label = Label.New($"[AUR] {pkg.Name}: {pkg.OldVersion} → {pkg.Version}");
+                    label.Halign = Align.Start;
+                    label.Wrap = true;
+                    label.MarginStart = 8;
+                    label.MarginEnd = 8;
+                    label.MarginTop = 4;
+                    label.MarginBottom = 4;
+                    row.SetActivatable(false);
+                    row.SetChild(label);
+                    listBox.Append(row);
+                }
+
+                foreach (var pkg in updates.Flatpaks)
+                {
+                    var row = new ListBoxRow();
+                    var label = Label.New($"[Flatpak] {pkg.Name ?? pkg.Id}: {pkg.Version}");
+                    label.Halign = Align.Start;
+                    label.Wrap = true;
+                    label.MarginStart = 8;
+                    label.MarginEnd = 8;
+                    label.MarginTop = 4;
+                    label.MarginBottom = 4;
+                    row.SetActivatable(false);
+                    row.SetChild(label);
+                    listBox.Append(row);
+                }
+
+                if (updates.Packages.Count == 0 && updates.Aur.Count == 0 && updates.Flatpaks.Count == 0)
+                {
+                    var row = new ListBoxRow();
+                    var label = Label.New("All packages are up to date");
+                    label.Halign = Align.Center;
+                    label.AddCssClass("dim-label");
+                    label.MarginTop = 8;
+                    label.MarginBottom = 8;
+                    row.SetActivatable(false);
+                    row.SetChild(label);
+                    listBox.Append(row);
+                }
+
+                return false;
+            });
         }
         catch (Exception e)
         {
             Console.WriteLine(e);
         }
-    }
-
-    private static void PopulateListBox(ListBox listBox, List<RssModel> items)
-    {
-        // Clear existing rows
-        while (listBox.GetFirstChild() is { } child)
-            listBox.Remove(child);
-
-        foreach (var item in items)
-        {
-            var row = new ListBoxRow();
-            var vbox = Box.New(Orientation.Vertical, 4);
-            vbox.MarginStart = 8;
-            vbox.MarginEnd = 8;
-            vbox.MarginTop = 4;
-            vbox.MarginBottom = 4;
-
-            var title = Label.New(item.Title);
-            title.Halign = Align.Start;
-            title.Wrap = true;
-            title.AddCssClass("heading");
-
-            var date = Label.New(item.PubDate);
-            date.Halign = Align.Start;
-            date.AddCssClass("dim-label");
-
-            var desc = Label.New(item.Description);
-            desc.Halign = Align.Start;
-            desc.Wrap = true;
-
-            vbox.Append(title);
-            vbox.Append(date);
-            vbox.Append(desc);
-
-            row.SetActivatable(false);
-            row.SetChild(vbox);
-            listBox.Append(row);
-        }
-    }
-
-    // Port these from HomeViewModel or reference them from a shared service
-    private static async Task<List<RssModel>> GetRssFeedAsync(string url, CancellationToken ct = default)
-    {
-        using var client = new HttpClient();
-        var xmlString = await client.GetStringAsync(url, ct);
-        var xml = XDocument.Parse(xmlString);
-
-        return xml.Descendants("item").Select(item => new RssModel
-        {
-            Title = item.Element("title")?.Value ?? "", Link = item.Element("link")?.Value ?? "",
-            Description = Regex.Replace(item.Element("description")?.Value ?? "", "<.*?>", string.Empty),
-            PubDate = item.Element("pubDate")?.Value ?? ""
-        }).ToList();
     }
 
     public void Dispose()
