@@ -21,6 +21,7 @@ public partial class LockoutService : ILockoutService
     private readonly Lock _lock = new();
 
     public event EventHandler<ILockoutService.LockoutStatusEventArgs>? StatusChanged;
+    public event EventHandler<string>? LogLineReceived;
 
     private bool IsLocked { get; set; }
 
@@ -83,6 +84,7 @@ public partial class LockoutService : ILockoutService
     public void ParseLog(string? logLine)
     {
         if (string.IsNullOrEmpty(logLine)) return;
+        LogLineReceived?.Invoke(this, logLine);
 
         var matchFlatpak = FlatpakProgressPattern.Match(logLine);
         var matchAur = AurProgressPattern.Match(logLine);

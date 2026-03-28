@@ -171,52 +171,6 @@
             </child>
           </object>
         </property>
-        <child type="overlay">
-          <object class="GtkBox" id="LockoutOverlay">
-            <property name="visible">false</property>
-            <property name="hexpand">true</property>
-            <property name="vexpand">true</property>
-            <property name="valign">fill</property>
-            <property name="halign">fill</property>
-            <property name="orientation">vertical</property>
-            <style>
-              <class name="lockout-overlay"/>
-            </style>
-            <child>
-              <object class="GtkBox">
-                <property name="orientation">vertical</property>
-                <property name="spacing">12</property>
-                <property name="valign">center</property>
-                <property name="halign">center</property>
-                <property name="hexpand">true</property>
-                <property name="vexpand">true</property>
-                <property name="margin-start">40</property>
-                <property name="margin-end">40</property>
-                <property name="margin-top">40</property>
-                <property name="margin-bottom">40</property>
-                <child>
-                  <object class="GtkLabel" id="LockoutDescription">
-                    <property name="label">Processing...</property>
-                    <property name="wrap">true</property>
-                    <property name="justify">center</property>
-                    <property name="halign">center</property>
-                    <style>
-                      <class name="lockout-description"/>
-                    </style>
-                  </object>
-                </child>
-                <child>
-                  <object class="GtkProgressBar" id="LockoutProgressBar">
-                    <property name="show-text">true</property>
-                    <property name="fraction">0.0</property>
-                    <property name="width-request">300</property>
-                    <property name="halign">center</property>
-                  </object>
-                </child>
-              </object>
-            </child>
-          </object>
-        </child>
       </object>
     </child>
   </object>

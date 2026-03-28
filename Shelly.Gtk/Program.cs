@@ -152,9 +152,7 @@ sealed class Program
             currentPage = initialHomeWindow;
 
             var mainOverlay = (Overlay)mainBuilder.GetObject("MainOverlay")!;
-            var lockoutOverlay = (Box)mainBuilder.GetObject("LockoutOverlay")!;
-            var lockoutDescription = (Label)mainBuilder.GetObject("LockoutDescription")!;
-            var lockoutProgressBar = (ProgressBar)mainBuilder.GetObject("LockoutProgressBar")!;
+            var lockoutDialog = serviceProvider.GetRequiredService<LockoutDialog>();
 
             var keyController = EventControllerKey.New();
             keyController.OnKeyPressed += (_, args) =>
@@ -403,15 +401,32 @@ sealed class Program
             {
                 GLib.Functions.IdleAdd(0, () =>
                 {
-                    lockoutOverlay.Visible = lockoutArgs.IsLocked;
-                    if (!lockoutArgs.IsLocked) return false;
-                    lockoutDescription.SetText(lockoutArgs.Description ?? "Processing...");
-                    lockoutProgressBar.Fraction = lockoutArgs.Progress / 100.0;
-                    if (lockoutArgs.IsIndeterminate)
+                    if (lockoutArgs.IsLocked)
                     {
-                        lockoutProgressBar.Pulse();
+                        if (!lockoutDialog.IsVisible)
+                        {
+                            lockoutDialog.Show(mainOverlay, lockoutArgs.Description ?? "Processing...",
+                                lockoutArgs.Progress, lockoutArgs.IsIndeterminate);
+                        }
+                        else
+                        {
+                            lockoutDialog.UpdateStatus(lockoutArgs.Description ?? "Processing...",
+                                lockoutArgs.Progress, lockoutArgs.IsIndeterminate);
+                        }
                     }
+                    else
+                    {
+                        lockoutDialog.ShowCloseButton();
+                    }
+                    return false;
+                });
+            };
 
+            lockoutService.LogLineReceived += (_, logLine) =>
+            {
+                GLib.Functions.IdleAdd(0, () =>
+                {
+                    lockoutDialog.AppendLogLine(logLine);
                     return false;
                 });
             };
@@ -463,7 +478,7 @@ sealed class Program
 
             bool ShouldHandleNavigationShortcut()
             {
-                if (lockoutOverlay.Visible)
+                if (lockoutDialog.IsVisible)
                 {
                     return false;
                 }
@@ -491,7 +506,7 @@ sealed class Program
             {
                 for (Widget? child = mainOverlay.GetFirstChild(); child != null; child = child.GetNextSibling())
                 {
-                    if (child == mainBox || child == lockoutOverlay || !child.Visible)
+                    if (child == mainBox || !child.Visible)
                     {
                         continue;
                     }
