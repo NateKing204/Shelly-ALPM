@@ -62,7 +62,6 @@ public class HomeWindow(
 
             var metaSearchWidget = metaSearch.CreateWindow(query);
             metaSearchContainer.Append(metaSearchWidget);
-            homeSearchEntry.SetText(string.Empty);
         };
 
         _totalAurLabel = (Label)builder.GetObject("TotalAurLabel")!;
@@ -94,7 +93,7 @@ public class HomeWindow(
 
         var upgradeAllButton = (Button)builder.GetObject("UpgradeAllButton")!;
         upgradeAllButton.OnClicked += (sender, args) => { _ = UpgradeAll(); };
-        
+
         var config = configService.LoadConfig();
         var aurBox = (Box)builder.GetObject("AurBox")!;
         var flatpakBox = (Box)builder.GetObject("FlatpakBox")!;
@@ -220,7 +219,7 @@ public class HomeWindow(
                 genericQuestionService.RaiseToastMessage(toastArgs);
                 return;
             }
-            
+
             var standardPackagesNeedingUpdate = packagesNeedingUpdate.Packages;
             if (standardPackagesNeedingUpdate.Count == 0)
             {
@@ -244,7 +243,7 @@ public class HomeWindow(
             }
 
             lockoutService.Show("Upgrading all packages...");
-            
+
             var aurUpdates = packagesNeedingUpdate.Aur;
             if (aurUpdates.Count != 0)
             {
@@ -426,7 +425,7 @@ public class HomeWindow(
         var packages = await privilegedOperationService.GetInstalledPackagesAsync();
 
         PreLoadIcons(packages.Select(x => x.Name).ToList());
-        
+
         ct.ThrowIfCancellationRequested();
         var updates = await unprivilegedOperationService.CheckForApplicationUpdates();
         ct.ThrowIfCancellationRequested();
