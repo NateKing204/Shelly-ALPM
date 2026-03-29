@@ -41,9 +41,13 @@ public class HomeWindow(
         _updatesListBox = (ListBox)builder.GetObject("UpdatesListBox")!;
         var showUpdatesButton = (ToggleButton)builder.GetObject("ShowUpdatesButton")!;
 
+        var arrowImage = (Image)showUpdatesButton.GetFirstChild()!;
         showUpdatesButton.OnToggled += (sender, args) =>
         {
             _updatesRevealer.RevealChild = showUpdatesButton.Active;
+            arrowImage.SetFromIconName(showUpdatesButton.Active
+                ? "pan-end-symbolic"
+                : "pan-start-symbolic");
             if (showUpdatesButton.Active && _updatesListBox is not null)
             {
                 _ = LoadUpdatesPanel(_updatesListBox, _cts.Token);

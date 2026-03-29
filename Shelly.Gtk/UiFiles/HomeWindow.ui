@@ -228,11 +228,6 @@
                         <property name="label">Upgrade All</property>
                       </object>
                     </child>
-                    <child>
-                      <object class="GtkToggleButton" id="ShowUpdatesButton">
-                        <property name="label">Show Updates</property>
-                      </object>
-                    </child>
                   </object>
                 </child>
               </object>
@@ -247,6 +242,7 @@
         <property name="transition-duration">300</property>
         <property name="halign">end</property>
         <property name="valign">fill</property>
+        <property name="margin-end">24</property>
         <property name="reveal-child">false</property>
         <child>
           <object class="GtkFrame">
@@ -284,6 +280,26 @@
             </child>
           </object>
         </child>
+      </object>
+    </child>
+    <child type="overlay">
+      <object class="GtkToggleButton" id="ShowUpdatesButton">
+        <property name="halign">end</property>
+        <property name="valign">center</property>
+        <property name="width-request">24</property>
+        <property name="vexpand">true</property>
+        <property name="has-frame">false</property>
+        <property name="opacity">0.5</property>
+        <property name="tooltip-text">Toggle Available Updates</property>
+        <child>
+          <object class="GtkImage" id="ShowUpdatesArrow">
+            <property name="icon-name">pan-start-symbolic</property>
+            <property name="pixel-size">24</property>
+          </object>
+        </child>
+        <style>
+          <class name="osd"/>
+        </style>
       </object>
     </child>
   </object>
