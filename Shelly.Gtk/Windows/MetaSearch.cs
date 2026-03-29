@@ -227,16 +227,36 @@ public class MetaSearch(
         {
             flatpakGroup = Task.Run(async () =>
             {
-                var flatPakInstalled = await unprivilegedOperationService.ListFlatpakPackages().ContinueWith(x =>
-                    x.Result.Select(y => new MetaPackageModel(y.Id, y.Name, y.Version, y.Description,
-                        PackageType.FLATPAK, y.Summary, "Flathub", true)).ToList());
-                var flatpakAvailable = await unprivilegedOperationService.SearchFlathubAsync(_initialQuery)
-                    .ContinueWith(x =>
-                        x.Result.Select(y => new MetaPackageModel(y.Id, y.Name, y.Version, y.Description,
-                            PackageType.FLATPAK, y.Description, y.Id,
-                            flatPakInstalled.Any(z => z.Name == y.Name))).ToList());
+                // Sync appstream cache (with timeout so it doesn't block forever)
+                var syncTask = unprivilegedOperationService.FlatpakSyncRemoteAppstream();
+                await Task.WhenAny(syncTask, Task.Delay(TimeSpan.FromSeconds(5), _cts.Token));
 
-                return flatpakAvailable;
+                // Get installed list for marking installed status
+                var flatPakInstalled = await unprivilegedOperationService.ListFlatpakPackages().ContinueWith(x =>
+                    x.Result.Select(y => y.Id).ToHashSet());
+
+                // Load all appstream apps and filter by query
+                var allApps = await unprivilegedOperationService.ListAppstreamFlatpak(_cts.Token);
+                var query = _initialQuery!;
+                var filtered = allApps
+                    .Where(app => app.Type != "addon")
+                    .Where(app =>
+                        app.Name.Contains(query, StringComparison.OrdinalIgnoreCase) ||
+                        app.Description.Contains(query, StringComparison.OrdinalIgnoreCase) ||
+                        app.Id.Contains(query, StringComparison.OrdinalIgnoreCase))
+                    .Take(100)
+                    .Select(app => new MetaPackageModel(
+                        app.Id,
+                        app.Name,
+                        app.Releases.FirstOrDefault()?.Version ?? string.Empty,
+                        app.Description,
+                        PackageType.FLATPAK,
+                        app.Summary,
+                        app.Remotes.FirstOrDefault()?.Name ?? "Flatpak",
+                        flatPakInstalled.Contains(app.Id)))
+                    .ToList();
+
+                return filtered;
             });
             groupList.Add(flatpakGroup);
         }
@@ -312,11 +332,9 @@ public class MetaSearch(
             if (aur.Count > 0) await privilegedOperationService.InstallAurPackagesAsync(aur);
             if (flatpak.Count > 0)
             {
-                foreach (var pkg in flatpak)
+                foreach (var pkg in selected.Where(x => x.PackageType == PackageType.FLATPAK))
                 {
-                    //TODO: This evnetually needs to work with everything else but this page only works with flathub atm
-                    //This can be a future improvment we can make on this page...
-                    await unprivilegedOperationService.InstallFlatpakPackage(pkg, false, "flathub", "stable");
+                    await unprivilegedOperationService.InstallFlatpakPackage(pkg.Id, false, pkg.Repository, "stable");
                 }
             }
         }
