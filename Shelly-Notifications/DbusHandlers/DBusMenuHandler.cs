@@ -13,16 +13,16 @@ public class DBusMenuHandler(Connection connection) : IPathMethodHandler
     public event Action? OnExitRequested;
 
     private static readonly
-        Dictionary<int, (string Label, string Type, bool Enabled, string icon, string subMenu, MenuEnum action)> Items =
+        Dictionary<int, (string Label, string Type, bool Enabled, string icon, string subMenu, MenuEnum action, bool visible)> Items =
             new()
             {
-                [1] = ("Open Shelly", "standard", true, "shelly", "", MenuEnum.OpenShelly),
-                [2] = ("Update Packages", "standard", true, "", "", MenuEnum.UpdatePackages),
-                [3] = ("Check for Updates", "standard", true, "", "", MenuEnum.CheckForUpdates),
-                [4] = ("Last check: Never", "standard", false, "", "", MenuEnum.LastTime),
-                [5] = ("", "separator", false, "", "", MenuEnum.None),
-                [98] = ("", "separator", false, "", "", MenuEnum.None),
-                [99] = ("Exit", "standard", true, "", "", action: MenuEnum.Exit),
+                [1] = ("Open Shelly", "standard", true, "shelly", "", MenuEnum.OpenShelly, true),
+                [2] = ("Update Packages", "standard", true, "", "", MenuEnum.UpdatePackages, true),
+                [3] = ("Check for Updates", "standard", true, "", "", MenuEnum.CheckForUpdates, true),
+                [4] = ("Last check: Never", "standard", false, "", "", MenuEnum.LastTime, true),
+                [5] = ("", "separator", false, "", "", MenuEnum.None, true),
+                [98] = ("", "separator", false, "", "", MenuEnum.None, true),
+                [99] = ("Exit", "standard", true, "", "", action: MenuEnum.Exit, true),
             };
 
     private const int SubmenuId = 6;
@@ -117,14 +117,14 @@ public class DBusMenuHandler(Connection connection) : IPathMethodHandler
     }
 
     private VariantValue BuildMenuItemVariant(int id, string label, string type, bool enabled, string icon,
-        string childrenDisplay)
+        string childrenDisplay, bool visible)
     {
         Dict<string, VariantValue> props = new(new Dictionary<string, VariantValue>
         {
             { "label", label },
             { "type", type },
             { "enabled", enabled },
-            { "visible", true },
+            { "visible", visible },
             { "icon-name", icon },
             { "children-display", childrenDisplay },
             { "toggle-type", "" }
@@ -144,7 +144,7 @@ public class DBusMenuHandler(Connection connection) : IPathMethodHandler
             children = childIds
                 .Select(childId => Items.TryGetValue(childId, out var childItem)
                     ? BuildMenuItemVariant(childId, childItem.Label, childItem.Type, childItem.Enabled, childItem.icon,
-                        childItem.subMenu)
+                        childItem.subMenu, childItem.visible)
                     : VariantValue.Struct(VariantValue.Int32(childId),
                         new Dict<string, VariantValue>(new Dictionary<string, VariantValue>()),
                         VariantValue.ArrayOfVariant(Array.Empty<VariantValue>())))
@@ -214,7 +214,7 @@ public class DBusMenuHandler(Connection connection) : IPathMethodHandler
         var av = w.WriteArrayStart(DBusType.Variant);
         foreach (var id in childrenIds)
             if (Items.TryGetValue(id, out var item))
-                w.WriteVariant(BuildMenuItemVariant(id, item.Label, item.Type, item.Enabled, item.icon, item.subMenu));
+                w.WriteVariant(BuildMenuItemVariant(id, item.Label, item.Type, item.Enabled, item.icon, item.subMenu, item.visible));
         w.WriteArrayEnd(av);
 
         context.Reply(w.CreateMessage());
@@ -312,7 +312,7 @@ public class DBusMenuHandler(Connection connection) : IPathMethodHandler
                 props["label"] = item.Label;
                 props["type"] = item.Type;
                 props["enabled"] = true;
-                props["visible"] = true;
+                props["visible"] = item.visible;
                 props["children-display"] = !string.IsNullOrEmpty(item.subMenu) ? item.subMenu : "";
             }
 
@@ -343,7 +343,7 @@ public class DBusMenuHandler(Connection connection) : IPathMethodHandler
                 w.WriteVariantBool(Items.TryGetValue(id, out var ei) && ei.Enabled);
                 break;
             case "visible":
-                w.WriteVariantBool(true);
+                w.WriteVariantBool(Items.TryGetValue(id, out var vi) && vi.visible);
                 break;
             case "children-display":
                 w.WriteVariantString(Items.TryGetValue(id, out var ci) ? ci.subMenu : "");
@@ -386,6 +386,12 @@ public class DBusMenuHandler(Connection connection) : IPathMethodHandler
             var packageIds = RegisterSubmenuItems(syncModel.Packages, i => $"{i.Name} {i.OldVersion} -> {i.Version}",
                 MenuEnum.StandardUpdate, ref startValue);
             RegisterSubmenu(packageIds, MenuEnum.StandardUpdate, SubmenuId + 3, "Standard");
+
+            var totalUpdates = flatpakIds.Count + aurIds.Count + packageIds.Count;
+            if (Items.TryGetValue(98, out var separator))
+            {
+                Items[98] = (separator.Label, separator.Type, separator.Enabled, separator.icon, separator.subMenu, separator.action, totalUpdates > 0);
+            }
         }
         catch (Exception e)
         {
@@ -393,7 +399,7 @@ public class DBusMenuHandler(Connection connection) : IPathMethodHandler
         }
 
         var time = GetIndexByAction(MenuEnum.LastTime);
-        Items[time!.Value] = ($"Last check: {DateTime.Now:HH:mm MM/dd}", "standard", false, "", "", MenuEnum.LastTime);
+        Items[time!.Value] = ($"Last check: {DateTime.Now:HH:mm MM/dd}", "standard", false, "", "", MenuEnum.LastTime, true);
 
         using var writer = connection.GetMessageWriter();
 
@@ -408,6 +414,16 @@ public class DBusMenuHandler(Connection connection) : IPathMethodHandler
         WriteSubmenuEntry(writer, GetIndexByAction(MenuEnum.StandardUpdate) ?? -1, "Standard");
         WriteSubmenuEntry(writer, GetIndexByAction(MenuEnum.AurUpdate) ?? -1, "Aur");
         WriteSubmenuEntry(writer, GetIndexByAction(MenuEnum.FlatpakUpdate) ?? -1, "Flatpak");
+
+        if (Items.TryGetValue(98, out var bottomSep))
+        {
+            writer.WriteStructureStart();
+            writer.WriteInt32(98);
+            writer.WriteDictionary(new Dictionary<string, VariantValue>
+            {
+                { "visible", bottomSep.visible }
+            });
+        }
 
         writer.WriteStructureStart();
         writer.WriteInt32(time!.Value);
@@ -476,7 +492,7 @@ public class DBusMenuHandler(Connection connection) : IPathMethodHandler
         foreach (var item in source)
         {
             Items.Remove(startValue);
-            Items.Add(startValue, (labelSelector(item), "standard", true, "", "", action: menuEnum));
+            Items.Add(startValue, (labelSelector(item), "standard", true, "", "", menuEnum, true));
             ids.Add(startValue);
             startValue++;
         }
@@ -488,7 +504,7 @@ public class DBusMenuHandler(Connection connection) : IPathMethodHandler
     {
         if (ids.Count <= 0) return;
         UpdatesSubmenuChildren.Add(menuEnum, ids);
-        Items.Add(parentId, (parentLabel, "standard", true, "", "submenu", menuEnum));
+        Items.Add(parentId, (parentLabel, "standard", true, "", "submenu", menuEnum, true));
     }
 
     private static int? GetIndexByAction(MenuEnum action)
