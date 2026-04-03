@@ -18,14 +18,22 @@ public class IconResolverService : IIconResolverService
     private readonly ConcurrentDictionary<string, string> _iconMap = [];
     private readonly Dictionary<string, List<string>> _shellyStreamManifest = [];
 
-    public IconResolverService()
+    private readonly IConfigService _configService;
+    
+    public IconResolverService(IConfigService configService)
     {
         _shellyStreamManifest = LoadShellyStreamManifest();
+        _configService= configService;
     }
 
     //Commenting out extra methods and plan to add them back in after futher optimizations
     public string? GetIconPath(string packageName)
     {
+        if (!_configService.LoadConfig().ShellyIconsEnabled)
+        {
+            return "Unavailable";
+        }
+        
         if (_iconMap.TryGetValue(packageName, out var iconPath))
         {
             return iconPath;
