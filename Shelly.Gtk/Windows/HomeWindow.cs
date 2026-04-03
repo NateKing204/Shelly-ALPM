@@ -21,6 +21,7 @@ public class HomeWindow(
     IGenericQuestionService genericQuestionService,
     IArchNewsService archNewsService,
     IOperationLogService operationLogService,
+    IIConDownloadService iconDownloadService,
     MetaSearch metaSearch) : IShellyWindow
 {
     private Box _box = null!;
@@ -49,6 +50,12 @@ public class HomeWindow(
         var homeSearchEntry = (SearchEntry)builder.GetObject("HomeSearchEntry")!;
         var metaSearchContainer = (Box)builder.GetObject("MetaSearchContainer")!;
         var searchPromptOverlay = (Box)builder.GetObject("SearchPromptOverlay")!;
+
+        Task.Run(async () =>
+        {
+            var result = await iconDownloadService.DownloadAndUnpackIcons();
+            return Task.CompletedTask;
+        });
 
         homeSearchEntry.OnActivate += (_, _) =>
         {
