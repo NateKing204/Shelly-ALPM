@@ -17,13 +17,33 @@ namespace Shelly.Gtk;
 
 sealed class Program
 {
+    private static string? _requestedPage;
+
     public static int Main(string[] args)
     {
         //GCSettings.LatencyMode = GCLatencyMode.SustainedLowLatency;
+
+        // Parse --page argument
+        for (int i = 0; i < args.Length; i++)
+        {
+            if (args[i] == "--page" && i + 1 < args.Length)
+            {
+                _requestedPage = args[i + 1];
+                break;
+            }
+        }
+
         ServiceCollection serviceCollection = new();
         var serviceProvider = ServiceBuilder.CreateDependencyInjection(serviceCollection);
 
-        var application = Application.New(ShellyConstants.Service, Gio.ApplicationFlags.DefaultFlags);
+        var application = Application.New(ShellyConstants.Service,
+            Gio.ApplicationFlags.DefaultFlags | Gio.ApplicationFlags.HandlesCommandLine);
+
+        application.OnCommandLine += (sender, e) =>
+        {
+            application.Activate();
+            return 0;
+        };
 
 
         application.OnActivate += (sender, _) =>
@@ -150,6 +170,41 @@ sealed class Program
             var initialHomeWindow = serviceProvider.GetRequiredService<HomeWindow>();
             contentArea.Append(initialHomeWindow.CreateWindow());
             currentPage = initialHomeWindow;
+
+            // Navigate to requested page from CLI args
+            if (_requestedPage != null)
+            {
+                switch (_requestedPage)
+                {
+                    case "flatpak-install":
+                        NavigateTo<FlatpakInstall>();
+                        break;
+                    case "flatpak-update":
+                        NavigateTo<FlatpakUpdate>();
+                        break;
+                    case "flatpak-remove":
+                        NavigateTo<FlatpakRemove>();
+                        break;
+                    case "aur-install":
+                        NavigateTo<AurInstall>();
+                        break;
+                    case "aur-update":
+                        NavigateTo<AurUpdate>();
+                        break;
+                    case "aur-remove":
+                        NavigateTo<AurRemove>();
+                        break;
+                    case "install-packages":
+                        NavigateTo<PackageInstall>();
+                        break;
+                    case "update-packages":
+                        NavigateTo<PackageUpdate>();
+                        break;
+                    case "manage-packages":
+                        NavigateTo<PackageManagement>();
+                        break;
+                }
+            }
 
             var mainOverlay = (Overlay)mainBuilder.GetObject("MainOverlay")!;
             var lockoutDialog = serviceProvider.GetRequiredService<LockoutDialog>();
