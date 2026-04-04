@@ -44,13 +44,13 @@ public class AurUpdateCommand : AsyncCommand<AurPackageSettings>
                 };
 
                 AnsiConsole.MarkupLine(
-                    $"[{statusColor}][[{args.CurrentIndex}/{args.TotalCount}]] {args.PackageName}: {args.Status}[/]" +
+                    $"[{statusColor}][[{args.CurrentIndex}/{args.TotalCount}]] {args.PackageName.EscapeMarkup()}: {args.Status}[/]" +
                     (args.Message != null ? $" - {args.Message.EscapeMarkup()}" : ""));
             };
 
             manager.Progress += (sender, args) =>
             {
-                AnsiConsole.MarkupLine($"[blue]{args.PackageName}[/]: {args.Percent}%");
+                AnsiConsole.MarkupLine($"[blue]{args.PackageName.EscapeMarkup()}[/]: {args.Percent}%");
             };
 
             manager.Question += (sender, args) =>
@@ -71,7 +71,7 @@ public class AurUpdateCommand : AsyncCommand<AurPackageSettings>
                 }
 
                 var showDiff = AnsiConsole.Confirm(
-                    $"[yellow]PKGBUILD changed for {args.PackageName}. View diff?[/]", defaultValue: false);
+                    $"[yellow]PKGBUILD changed for {args.PackageName.EscapeMarkup()}. View diff?[/]", defaultValue: false);
 
                 if (showDiff)
                 {
@@ -82,10 +82,10 @@ public class AurUpdateCommand : AsyncCommand<AurPackageSettings>
                 }
 
                 args.ProceedWithUpdate = AnsiConsole.Confirm(
-                    $"[yellow]Proceed with update for {args.PackageName}?[/]", defaultValue: true);
+                    $"[yellow]Proceed with update for {args.PackageName.EscapeMarkup()}?[/]", defaultValue: true);
             };
 
-            AnsiConsole.MarkupLine($"[yellow]Updating AUR packages: {string.Join(", ", settings.Packages)}[/]");
+            AnsiConsole.MarkupLine($"[yellow]Updating AUR packages: {string.Join(", ", settings.Packages.Select(p => p.EscapeMarkup()))}[/]");
             await manager.UpdatePackages(settings.Packages.ToList());
             AnsiConsole.MarkupLine("[green]Update complete.[/]");
 

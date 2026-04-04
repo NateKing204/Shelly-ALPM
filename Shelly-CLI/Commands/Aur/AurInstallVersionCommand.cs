@@ -47,12 +47,12 @@ public class AurInstallVersionCommand : AsyncCommand<AurInstallVersionSettings>
                 };
 
                 AnsiConsole.MarkupLine(
-                    $"[{statusColor}][[{args.CurrentIndex}/{args.TotalCount}]] {args.PackageName}: {args.Status}[/]" +
+                    $"[{statusColor}][[{args.CurrentIndex}/{args.TotalCount}]] {args.PackageName.EscapeMarkup()}: {args.Status}[/]" +
                     (args.Message != null ? $" - {args.Message.EscapeMarkup()}" : ""));
             };
 
             AnsiConsole.MarkupLine(
-                $"[yellow]Installing AUR package {settings.Package} at commit {settings.Commit}[/]");
+                $"[yellow]Installing AUR package {settings.Package.EscapeMarkup()} at commit {settings.Commit.EscapeMarkup()}[/]");
             await manager.InstallPackageVersion(settings.Package, settings.Commit);
             AnsiConsole.MarkupLine("[green]Installation complete.[/]");
 

@@ -29,7 +29,7 @@ public class AurInstallCommand : AsyncCommand<AurInstallSettings>
 
         var packageList = settings.Packages.ToList();
 
-        AnsiConsole.MarkupLine($"[yellow]AUR packages to install:[/] {string.Join(", ", packageList)}");
+        AnsiConsole.MarkupLine($"[yellow]AUR packages to install:[/] {string.Join(", ", packageList.Select(p => p.EscapeMarkup()))}");
 
         if (!Program.IsUiMode)
         {
@@ -62,7 +62,7 @@ public class AurInstallCommand : AsyncCommand<AurInstallSettings>
                     };
 
                     AnsiConsole.MarkupLine(
-                        $"[{statusColor}][[{args.CurrentIndex}/{args.TotalCount}]] {args.PackageName}: {args.Status}[/]" +
+                        $"[{statusColor}][[{args.CurrentIndex}/{args.TotalCount}]] {args.PackageName.EscapeMarkup()}: {args.Status}[/]" +
                         (args.Message != null ? $" - {args.Message.EscapeMarkup()}" : ""));
                 }
             };
@@ -100,7 +100,7 @@ public class AurInstallCommand : AsyncCommand<AurInstallSettings>
                 return 0;
             }
 
-            AnsiConsole.MarkupLine($"[yellow]Installing AUR packages: {string.Join(", ", settings.Packages)}[/]");
+            AnsiConsole.MarkupLine($"[yellow]Installing AUR packages: {string.Join(", ", settings.Packages.Select(p => p.EscapeMarkup()))}[/]");
             var progressTable = new Table().AddColumns("Package", "Progress", "Status", "Stage");
             await AnsiConsole.Live(progressTable).AutoClear(false)
                 .StartAsync(async ctx =>
@@ -145,7 +145,7 @@ public class AurInstallCommand : AsyncCommand<AurInstallSettings>
             if (missingPackages.Count > 0)
             {
                 AnsiConsole.MarkupLine(
-                    $"[red]Installation failed:[/] {string.Join(", ", missingPackages)}");
+                    $"[red]Installation failed:[/] {string.Join(", ", missingPackages.Select(p => p.EscapeMarkup()))}");
                 return 1;
             }
 

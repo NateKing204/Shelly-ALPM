@@ -98,7 +98,7 @@ public class AppImageInstallCommand : AsyncCommand<AppImageInstallSettings>
         }
         catch (Exception ex)
         {
-            AnsiConsole.MarkupLine($"[yellow]Warning: Could not set file permissions: {ex.Message}[/]");
+            AnsiConsole.MarkupLine($"[yellow]Warning: Could not set file permissions: {ex.Message.EscapeMarkup()}[/]");
         }
     }
 
@@ -133,11 +133,11 @@ public class AppImageInstallCommand : AsyncCommand<AppImageInstallSettings>
             SetFilePermissions(desktopFilePath, "644");
             UpdateDesktopDatabase(desktopDir);
 
-            AnsiConsole.MarkupLine($"[green]Desktop entry created: {desktopFilePath}[/]");
+            AnsiConsole.MarkupLine($"[green]Desktop entry created: {desktopFilePath.EscapeMarkup()}[/]");
         }
         catch (Exception ex)
         {
-            AnsiConsole.MarkupLine($"[yellow]Warning: Could not create desktop entry: {ex.Message}[/]");
+            AnsiConsole.MarkupLine($"[yellow]Warning: Could not create desktop entry: {ex.Message.EscapeMarkup()}[/]");
         }
     }
 
@@ -166,7 +166,7 @@ public class AppImageInstallCommand : AsyncCommand<AppImageInstallSettings>
         }
         catch (Exception ex)
         {
-            AnsiConsole.MarkupLine($"[yellow]Warning: Could not set desktop database: {ex.Message}[/]");
+            AnsiConsole.MarkupLine($"[yellow]Warning: Could not set desktop database: {ex.Message.EscapeMarkup()}[/]");
         }
     }
 }
